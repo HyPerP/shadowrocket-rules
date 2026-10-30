@@ -1,0 +1,35 @@
+# 托管仓库用：push 时校验 extras/*.module，防止坏模块被自动更新到手机。
+#
+# 部署位置：HyPerP/shadowrocket-rules/.github/workflows/validate-modules.yml
+# 前提：仓库里同时有 tools/validate_modules.py（从源仓库 E:\shadowrocket 一并上传）。
+#
+# 说明：
+#   - 只校验模块文件，不碰域名列表工作流（update-adblock-domains.yml）；
+#   - 校验失败 = Action 红叉，不会阻止已推送文件被 jsDelivr 提供，所以提交前请先在本地跑：
+#       python tools/validate_modules.py --dir extras
+#   - 若要更严格地阻断坏模块，可在仓库 Settings → Branches 里对 main 开启
+#     "Require status checks to pass before merging"（或改用 PR 流程）。
+name: validate-modules
+
+on:
+  push:
+    paths:
+      - "extras/**.module"
+      - "tools/validate_modules.py"
+      - ".github/workflows/validate-modules.yml"
+  pull_request:
+    paths:
+      - "extras/**.module"
+      - "tools/validate_modules.py"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Validate Shadowrocket modules
+        run: python tools/validate_modules.py --dir extras

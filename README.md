@@ -28,3 +28,16 @@ DOMAIN-SET,https://raw.githubusercontent.com/HyPerP/shadowrocket-rules/main/extr
   其上游又包含 AdGuard、EasyList、EasyPrivacy、jiekouAD、OISD、hagezi、StevenBlack、Pollock 等公开规则源。
 - Johnshall 补充域名来源：<https://github.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever>（CC BY-SA 4.0）。
 - 本仓库仅做格式清洗/合并，规则内容的版权与许可遵循上游；如需分发请保留上述来源说明。
+
+## App 去广告模块（单文件通用版，2026-10-30）
+
+`extras/adblock.module`：把 **B 站 + 番茄小说/红果短剧 + 微博** 的 App 专项广告合并为一个通用模块
+（域名规则 + URL 改写 + 可选 MITM；默认不启用任何第三方脚本、不含证书）。
+
+- Shadowrocket 使用：配置 → 模块 → 右上角 `+` → 填写链接 →
+  `https://cdn.jsdelivr.net/gh/HyPerP/shadowrocket-rules@main/extras/adblock.module`
+- 原始地址（jsDelivr 不稳时）：`https://raw.githubusercontent.com/HyPerP/shadowrocket-rules/main/extras/adblock.module`
+- 开启「自动更新 → 模块 → 自动后台更新」后，本仓库更新即自动同步到手机；
+- 校验工具：`tools/validate_modules.py`（`python tools/validate_modules.py --dir extras`）；
+  `.github/workflows/validate-modules.yml` 会在 push 时自动校验模块语法。
+- 需要 HTTPS 解密的只有 B 站第 3/4 层与番茄 HTTPS 改写层；红果/微博/B站第 1、2 层不需要。

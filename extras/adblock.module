@@ -1,0 +1,702 @@
+#!name=通用去广告（B站 + 番茄/红果 + 微博）
+#!desc=2026-10-30 通用版：把 B站、番茄小说、红果短剧、微博的广告拦截合并为这一个模块（原来的 bilibili/bytedance/weibo 三个模块已删除）。纯域名 + URL 改写 + 可选 MITM；默认不启用任何第三方脚本、不含证书。B站第 3/4 层与番茄 HTTPS 改写层需要开启 HTTPS 解密；红果、微博、B站第 1/2 层不需要。按远程模块 URL 安装后可随 Shadowrocket 自动更新。
+#!author=本地整理（来源：blackmatrix7、deezertidal/bm7、BiliUniverse/ADBlock、SherryBX/XiaoQi、q85985477/shadowrocket-modules、qq2519157/adblock-modules（MIT © 2026 logan）、2026-10-29/30 真机日志）
+#!homepage=https://github.com/HyPerP/shadowrocket-rules
+#!version=1.0
+#!date=2026-10-30
+
+# ============================================================
+# 通用去广告模块（单文件版）——结构、顺序与依赖
+#
+# 【合并来源】2026-10-30 合并自三个已删除的 App 模块：
+#   · bilibili-adblock.module（B站开屏三层 + 站内推广规则，v2）
+#   · bytedance-adblock.module（番茄 + 红果，含原 fanqie 模块迁移 + 红果 v1.4 MIT）
+#   · weibo-adblock.module（微博开屏/广告 SDK）
+#   合并时做过跨模块冲突检查：同域不同策略 0 组、重复 URL 改写 0 条。
+#
+# 【三段顺序不可随意调换】
+#   1) [Rule] 第一部分 = 字节系（番茄/红果）：A 段正片 DIRECT 白名单在前，例外 REJECT 必须在
+#      更宽泛的 DIRECT 之前（如 v*-novelapp*.fqnovelvod.com 的 REJECT 要排在 fqnovelvod.com DIRECT 前）；
+#      这一段内部顺序是刻意的，不要改。
+#   2) 第二部分 = B 站：广告域 → 开屏素材/接口/站内推广（无 DIRECT 规则，不受上段影响）。
+#   3) 第三部分 = 微博：纯广告子域 REJECT。
+#   三段之间没有同域冲突；如需临时停用某一 App 的规则，按段落注释即可。
+#
+# 【是否需要 HTTPS 解密】
+#   · 不需要证书：字节系第 1 层 + 红果全部、微博全部、B站第 1/2 层（域名 + 明文 HTTP 素材）
+#   · 需要解密：B站第 3/4 层（splash 接口 + 站内推广接口）、番茄 HTTPS URL 改写层
+#     开启方法：配置 → ⓘ → HTTPS 解密 → 生成/安装自签 CA → 打开开关；[MITM] 已用 %APPEND% 追加。
+#   · 红果不依赖 MITM（TTNet Cronet 拒绝用户 CA，上游已定案）；不要开解密也能用。
+#
+# 【安装 / 自动更新】
+#   远程：配置 → 模块 → 右上角 + → 填链接 →
+#     https://cdn.jsdelivr.net/gh/HyPerP/shadowrocket-rules@main/extras/adblock.module
+#   自动更新：Shadowrocket → 自动更新 → 模块 → 自动后台更新（间隔 1 天）+ iOS 后台 App 刷新。
+#   手动/本地：复制全文 → 模块 → 新建模块 → 粘贴保存。
+#
+# 【安全】
+#   · 只用你自己生成的自签 CA；模块不含证书/私钥，不启用第三方脚本，不引用公共 CA。
+#   · 若某 App 因证书锁定（pinning）异常：关闭当前配置的 HTTPS 解密（纯域名层仍有效）或停用本模块。
+#   · 字节系模块会同时影响抖音/头条的部分穿山甲广告与统计（预期）；B站第 4 层会让活动位/
+#     搜索默认词/小卡片消失；不需要时按段落注释。
+#
+# 【来源与许可】
+#   blackmatrix7（GPL-2.0，仅参考开屏 show/list 思路）、deezertidal/shadowrocket-rules（bm7 规则）、
+#   BiliUniverse/ADBlock（Apache-2.0，规则路径/隐私追踪域）、SherryBX/XiaoQi-sgmodule、
+#   q85985477/shadowrocket-modules、qq2519157/adblock-modules（MIT）。
+#   公开分发请保留本段来源标注并遵守各上游许可证。
+# ============================================================
+
+[Rule]
+# ==========================================================================
+# 第一部分：字节系（番茄小说 + 红果短剧）—— 顺序不可调换
+# ==========================================================================
+
+# ============================================================
+# 从上到下命中即停；带 pre-matching 的 REJECT 规则会被提前求值（最高优先级）。
+# 因此凡与「正片 DIRECT 白名单」有交集的域名，一律不加 pre-matching（如 p*-ad-sign、ecombdapi）。
+# 若旧版 iOS 加载报错：把本文件中所有 ",pre-matching" 删掉即可退回（红果 v1.4 的降级方案）。
+# ============================================================
+
+# ─────────── A. 正片保护（必须最前；例外 REJECT 必须在宽泛 DIRECT 之前）───────────
+# A1. 红果「剧集间贴片/插屏」广告视频（都在 qznovelvod 上，正片是 reading-video 前缀）
+DOMAIN-WILDCARD,v*-reading-ad.qznovelvod.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,v*-bd-daily-reading-ad.qznovelvod.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,v*-se-daily-reading-ad.qznovelvod.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,v*-se-sjy-daily-reading-ad.qznovelvod.com,REJECT,extended-matching,pre-matching
+
+# A2. 番茄广告视频子域（原 fanqie 模块 D 段；2026-10-29 真机日志里 v9/v26/v11-novelapp.fqnovelvod.com
+#     被 REJECT 2262 次 = 广告视频确实被拦到）。必须排在 A3 的 fqnovelvod 整域 DIRECT 之前。
+DOMAIN-WILDCARD,v*-novelapp*.fqnovelvod.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,v*-ad*.fqnovelvod.com,REJECT,extended-matching,pre-matching
+# 兜底（原 fanqie 模块注释行，默认关闭）：视频广告复发且不在乎番茄内正常视频时取消注释。
+# 取消后必须留在本行位置（A3 之前），否则会被 fqnovelvod 整域 DIRECT 挡住而不生效。
+#DOMAIN-SUFFIX,fqnovelvod.com,REJECT,extended-matching,pre-matching
+
+# A3. 正片/听书/图床/内容 API 白名单（来自红果 v1.4，全部 DIRECT）
+#     extended-matching = 同时按 SNI 匹配，覆盖 App 用 HTTPDNS 裸 IP 直连的场景。
+DOMAIN-SUFFIX,fqnovelvod.com,DIRECT,extended-matching
+DOMAIN-WILDCARD,v*-reading-video*.qznovelvod.com,DIRECT,extended-matching
+DOMAIN-WILDCARD,v*-reading-videocdn*.qznovelvod.com,DIRECT,extended-matching
+DOMAIN,n98-v-readingvideo.qznovelvod.com,DIRECT,extended-matching
+DOMAIN-WILDCARD,*-fq-tts.fqnovelvod.com,DIRECT,extended-matching
+DOMAIN-SUFFIX,qznovelvod.com,DIRECT,extended-matching
+DOMAIN-WILDCARD,p*-novel*.byteimg.com,DIRECT,extended-matching
+# p3-ad-sign / p3-tt 是上游标注的正片签名图床：先 DIRECT，p6/p9 等广告签名图床由 F 段的
+# p*-ad-sign 通配 REJECT 接管（p3 命中 A3 即停，不会被 F 段误杀）。
+DOMAIN,p3-ad-sign.byteimg.com,DIRECT,extended-matching
+DOMAIN,p3-tt.byteimg.com,DIRECT,extended-matching
+DOMAIN-WILDCARD,api*-normal.fqnovel.com,DIRECT,extended-matching
+DOMAIN-WILDCARD,api*-normal-*.fqnovel.com,DIRECT,extended-matching
+DOMAIN-WILDCARD,frontier*-toutiao-lq.fqnovel.com,DIRECT,extended-matching
+DOMAIN-WILDCARD,lf*-reading.fqnovelstatic.com,DIRECT,extended-matching
+DOMAIN-WILDCARD,lf*-reading*.fqnovelpic.com,DIRECT,extended-matching
+DOMAIN-SUFFIX,hongguo.com,DIRECT,extended-matching
+DOMAIN-SUFFIX,hongguo.douyin.com,DIRECT,extended-matching
+# A4. 可选：UG/金币挂件域（红果 v1.4 反编译实证 api*-normal-sinfonline* 挂件模板）；
+#     想连挂件/约读任务一起杀就取消注释（默认关闭，与「想用商城就关 K 段」同一哲学）。
+#     注意：取消注释后必须挪到上面 A3 的 api*-normal-* 白名单之前，否则被白名单挡住。
+#DOMAIN-WILDCARD,api*-normal-sinfonline*.fqnovel.com,REJECT,extended-matching,pre-matching
+
+# ─────────── B. 断 HTTPDNS 旁路（逼 App 回退系统 DNS，A/H 段域名规则才有效）───────────
+# 依据：红果 v1.4（TTNet setTTDNSServerHost("dig.bdurl.net")，备用 dig.zjurl.cn；硬编码
+#       IP 表 101.36.166.16-19 恰为 4 个地址 → /30）+ 2026-10-29 真机日志。
+# 说明（2026-10-30 QA）：DOMAIN-KEYWORD,httpdns 会拒绝设备上所有含 httpdns 的域名，可能误伤其它
+#       App 的 HTTPDNS 端点；默认注释。红果/番茄已知 HTTPDNS 域由下面两条精确规则覆盖；
+#       需要更激进（红果换用未知 httpdns 子域）时再取消注释：
+# DOMAIN-KEYWORD,httpdns,REJECT,extended-matching,pre-matching
+DOMAIN,dig.bdurl.net,REJECT,extended-matching,pre-matching
+DOMAIN,dig.zjurl.cn,REJECT,extended-matching,pre-matching
+IP-CIDR,101.36.166.16/30,REJECT,no-resolve
+IP-CIDR,180.96.2.114/32,REJECT,no-resolve
+
+# ─────────── C. 红果「直播带货卡片」信令域（断粮道；v1.2/v1.3）───────────
+# 证据：2026-10-25 实机抓包 webcast*-open-hl / content-open 与广告弹出秒级同行；四独立上游印证。
+# 代价：红果/抖音内跳真实直播间会失效（直播广告落地页，属预期）。
+DOMAIN-WILDCARD,webcast*-open*.douyin.com,REJECT,extended-matching,pre-matching
+DOMAIN,webcast-open.douyin.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,webcast*-open*.douyin.com.c.dsa.cdnbuild.net,REJECT,extended-matching,pre-matching
+DOMAIN,content-open.douyin.com,REJECT,extended-matching,pre-matching
+# 勿拦（红果 v1.4 多源实测误伤）：p*-webcast*.douyinpic.com=封面白屏；pull-lls-*=推送共用；
+# webcast5-ws-web-*=真直播弹幕 WS；douyinpic.com/ecombdimg.com=通用图床；
+# bytegecko.com=H5 离线包；pitaya.bytedance.com=播放器配置；amemv.com=抖音主域。
+
+# ─────────── D. 字节系广告投放/配置下发接口 ───────────
+# D1. 红果/番茄自家广告投放：只拦 ads*-normal / minigame*-normal 子域（-hl/-lf/-lq 机房全覆盖），
+#     不整域拒 zijieapi.com（否则误伤 mssdk/imapi/gecko/bsync/polaris 等非广告接口）。
+DOMAIN-WILDCARD,ads*-normal.zijieapi.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,ads*-normal-*.zijieapi.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,minigame*-normal.zijieapi.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,minigame*-normal-*.zijieapi.com,REJECT,extended-matching,pre-matching
+# D2. 广告/运营配置下发（TNC，dns105 内置表 send_tnc_host_arrays 实证）
+DOMAIN-WILDCARD,tnc*-bjlgy*.zijieapi.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,tnc*-bjlgy*.bytedance.com,REJECT,extended-matching,pre-matching
+DOMAIN,tnc3-alisc1.zijieapi.com,REJECT,extended-matching,pre-matching
+DOMAIN,tnc3-aliec2.zijieapi.com,REJECT,extended-matching,pre-matching
+DOMAIN,tnc0-alisc1.zijieapi.com,REJECT,extended-matching,pre-matching
+DOMAIN,tnc0-aliec2.zijieapi.com,REJECT,extended-matching,pre-matching
+DOMAIN,tnc3-alisc1.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN,tnc3-aliec2.snssdk.com,REJECT,extended-matching,pre-matching
+# D3. 电商推广位（红果内置商城）：想用红果商城就注释这一段；上游红果 v1.4 同样不加 pre-matching，
+#     方便你用更靠上/更靠下的规则覆盖它。
+DOMAIN-WILDCARD,ecom*-normal*.ecombdapi.com,REJECT,extended-matching
+DOMAIN-WILDCARD,ec*-core*.ecombdapi.com,REJECT,extended-matching
+DOMAIN-WILDCARD,isaas*-normal*.ecombdapi.com,REJECT,extended-matching
+
+# ─────────── E. 穿山甲 / Pangle 广告 SDK（原 fanqie 模块 B 段）───────────
+DOMAIN-SUFFIX,pglstatp-toutiao.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,pglstatp-toutiao-b.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,pangolin-sdk-toutiao.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,pangolin-sdk-toutiao-b.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,pangolin-sdk-toutiao1.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,pangolin16.isnssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,pangolin16.sgsnssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,pangolin*.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,pangle.io,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,pangle-ads.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,pangle-b.io,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,pangle.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,ad.pangle.cn,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,ad.pangolin.cn,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,oceanengine.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,byteorge.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,bytegoofy.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,csjplatform.com,REJECT,extended-matching,pre-matching
+
+# ─────────── F. 广告素材签名 / 弹窗落地页 / 随机子域广告 CDN ───────────
+# F1. 广告签名图床（p3-ad-sign 已在 A3 白名单；p6/p9 等由通配接管；本段不加 pre-matching，
+#     否则会压掉 A3 的 p3-ad-sign/p3-tt DIRECT 例外）。
+DOMAIN-WILDCARD,p*-ad-sign.byteimg.com,REJECT,extended-matching
+DOMAIN,p3-mgsdk-sign.byteimg.com,REJECT,extended-matching
+DOMAIN,p9-mgsdk-sign.byteimg.com,REJECT,extended-matching
+DOMAIN,p1-luckycatopen.byteimg.com,REJECT,extended-matching
+DOMAIN-WILDCARD,p*-developer-sign.bytemaimg.com,REJECT,extended-matching
+# F2. 广告弹窗/跳转/落地页（均有证书固定，域名层 REJECT 在 TLS 握手前生效，不受 pinning 影响）
+DOMAIN,zlink.ugsdk.cn,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,praisewindow.ugsdk.cn,REJECT,extended-matching,pre-matching
+DOMAIN,praisewindow-sinfonlinea.ugsdk.cn,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,chengzijianzhan.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,activity-ag.awemeughun.com,REJECT,extended-matching,pre-matching
+DOMAIN,sf3-ttcdn-tos.pstatp.com,REJECT,extended-matching,pre-matching
+# F3. 随机子域广告 CDN（安卓实抓确认的伪装域名，iOS 侧未全部验证，异常可整段注释）
+DOMAIN-SUFFIX,comfylink.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,ndcpp.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,ydycdn.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,qrstuvwxyzab.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,wuchuyun.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,xinqiucc.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,jomoxc.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,wmzfylgdsz.com,REJECT,extended-matching,pre-matching
+
+# ─────────── G. 番茄视频 CDN 广告子域 / 西瓜「小说 App」素材 ───────────
+# 原 fanqie 模块 D 段 + E 段 URL-REGEX 的域名层升级（URL-REGEX 需要解密才能看到完整 URL，
+# 域名通配不需要证书，二者同时保留、互为兜底）。
+DOMAIN-SUFFIX,novelapp.ixigua.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,v6-novelapp.ixigua.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,default.ixigua.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,v*-ad.ixigua.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,v*-dc-ad.ixigua.com,REJECT,extended-matching,pre-matching
+
+# ─────────── H. 埋点 / 统计 / 广告监测（不影响播放；App 功能异常时先注释 i*.snssdk 几行）───────────
+# H1. 字节系通用统计（原 fanqie 模块 C 段）
+DOMAIN,i.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN,i-lq.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN,i-hl.snssdk.com,REJECT,extended-matching,pre-matching
+# 例外说明：红果 v1.4 为了避免 SDK 反复重试，把 is.snssdk.com 改为「放行 + 信封脚本」；
+# 本模块默认不启用脚本，所以沿用原 fanqie 模块的 REJECT。若观察到穿山甲反复重试/耗电，
+# 可注释本行（= 上游做法）。is-lq/is-hl 同理（上游也是注释状态）。
+DOMAIN,is.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN,ib-lq.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN,mcs.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN,security-lq.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN,gurd.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,log.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,log-hl.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,mon.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,ib.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN,mon.toutiaocloud.net,REJECT,extended-matching,pre-matching
+DOMAIN,mon.toutiaocloud.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,ad.zijieapi.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,applog.zijieapi.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,mon.zijieapi.com,REJECT,extended-matching,pre-matching
+# H2. 番茄埋点/推送（A 段 low-risk 子域 + E 段机房变体；QUIC/UDP 也适用）
+# 注意：frontier*-toutiao-lq 在 A3 被白名单放行（上游红果标注为推送通道），这里只拒 -lf 机房，
+#       来自原 fanqie 模块（2026-10-29/30 日志段）。两者后缀不同、不冲突；若番茄推送异常先注释本行。
+DOMAIN-SUFFIX,frontier100-toutiao-lf.fqnovel.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,mon11-misc-lq.fqnovel.com,REJECT,extended-matching,pre-matching
+DOMAIN-KEYWORD,applog-lf.fqnovel.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,mon*-misc*.fqnovel.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,log*-applog*.fqnovel.com,REJECT,extended-matching,pre-matching
+DOMAIN-WILDCARD,rtlog*-applog*.fqnovel.com,REJECT,extended-matching,pre-matching
+# H3. 红果 v1.4 补的 fqnovel 关键词形态（原 fanqie 模块没有，机房后缀夹在中间时通配更稳）
+# 这两条不加 pre-matching：避免提前求值压过 A 段正片白名单（QA 2026-10-30 构造域名实测冲突）
+DOMAIN-KEYWORD,applog.fqnovel.com,REJECT,extended-matching
+DOMAIN-KEYWORD,-misc.fqnovel.com,REJECT,extended-matching
+# H4. XiaoQi v1.9 抽取的字节埋点精确域（原 fanqie 模块未覆盖）
+DOMAIN,log.zijieapi.com,REJECT,extended-matching,pre-matching
+DOMAIN,analytics.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN,applog.snssdk.com,REJECT,extended-matching,pre-matching
+# H5. 广告效果监测（2026-10-29 日志里 g.cn.miaozhen.com 未被拦）
+DOMAIN-SUFFIX,miaozhen.com,REJECT,extended-matching,pre-matching
+
+# ─────────── I. URL-REGEX（原 fanqie 模块 E 段；HTTPS 需 MITM 才能看到完整 URL）───────────
+# 域名层等价规则已在 G/H 段补齐（不需解密）；本段保留原始写法，供已开解密的场景精确匹配。
+# 2026-10-30 QA：这两条 URL-REGEX 需要 [MITM] 覆盖 *.ixigua.com 才能看到 HTTPS 完整 URL，
+# 否则是「看似生效、实际静默失效」；域名层 G 段已覆盖等价广告子域，故默认注释。
+# 启用前请把 *.ixigua.com 加进 [MITM] hostname：
+# URL-REGEX,v[^\/]*\-ad\.ixigua\.com(?![\w.-]),REJECT
+# URL-REGEX,v[^\/]*\-dc\-ad\.ixigua\.com(?![\w.-]),REJECT
+URL-REGEX,mon[^\/]*\-misc\.fqnovel\.com(?![\w.-]),REJECT
+URL-REGEX,[^\/]*log[^\/]*\-applog[^\/]*\.fqnovel\.com(?![\w.-]),REJECT
+URL-REGEX,mon[^\/]*\-misc\-[^\/]*\.fqnovel\.com(?![\w.-]),REJECT
+
+# ─────────── J. IP-CIDR 兜底（原 fanqie 模块 F 段；社区规则里的广告 IP，可能过时，保留无妨）───────────
+IP-CIDR,49.71.37.101/32,REJECT,no-resolve
+IP-CIDR,117.71.105.23/32,REJECT,no-resolve
+IP-CIDR,218.94.207.205/32,REJECT,no-resolve
+IP-CIDR,117.92.229.188/32,REJECT,no-resolve
+
+# ─────────── K. 白山云字节节点（红果 v1.4 试验位：全 APK 0 命中=服务端下发 CDN 候选）───────────
+# 仅挡素材加载、不影响 App 功能；正片异常时删本行。
+DOMAIN,v9-default.tt.x.bsgslb.cn,REJECT,extended-matching,pre-matching
+# 上游红果注释候选（单一来源，iOS 侧未验证，默认关闭）：
+#DOMAIN-SUFFIX,hongguoapp.com,REJECT
+#DOMAIN-SUFFIX,hongguosdk.com,REJECT
+
+# ─────────── L. 旧 fanqie 模块里「默认注释」的风险规则（原样保留，按需启用）───────────
+# 微信登录静态 CDN（可能影响其它 App 微信登录）
+#DOMAIN,apd-pcdnwxlogin.teg.tencent-cloud.net,REJECT
+# 环信 IM SDK（可能影响某些 App 的聊天功能）
+#DOMAIN,msync-im1-vip6-std.easemob.com,REJECT
+# 整个 bytedance.com（更激进，可能影响字节系登录/安全服务）
+#DOMAIN-SUFFIX,bytedance.com,REJECT
+
+# ==========================================================================
+# 第二部分：哔哩哔哩（B站）
+# ==========================================================================
+# ---------- A. 广告 / 统计 / 追踪域 ----------
+# cm.bilibili.com：B 站广告点击跳转与效果上报域（Web 端广告卡片 href 都指向它；easylistchina
+# 也把它当广告标识；开屏日志里出现 2 条连接）。v1 用 DOMAIN，v2 改 DOMAIN-SUFFIX 以覆盖
+# s.cm.bilibili.com 等子域（社区模块 XiaoQi 单列过该子域）。拦掉只影响广告归因/上报。
+DOMAIN-SUFFIX,cm.bilibili.com,REJECT
+# data.bilibili.com / dataflow.biliapi.com：埋点与大数据上报（开屏时分别出现 15 / 9 条）。
+# 主配置的广告 DOMAIN-SET 已覆盖，这里重复列出是为了「本模块单独使用」时也完整。
+DOMAIN,data.bilibili.com,REJECT
+DOMAIN,dataflow.biliapi.com,REJECT
+# httpdns.bilivideo.com：B 站自有 HTTPDNS（解析旁路）。拦掉后 App 回落系统 DNS，
+# 避免绕过本模块的域名判断；主配置也已拦（开屏日志里出现 14 条）。
+DOMAIN,httpdns.bilivideo.com,REJECT
+# ad.bilibili.com：B 站广告投放/素材域（社区 hosts 去广告教程与 XiaoQi 模块都直接 REJECT；
+# 当前解析到 123.234.3.x，与 api.vc/manga 同属 B 站负载均衡段）。
+# 拦掉只影响广告位请求；若 B 站广告位出现白块/报错可注释本行。
+DOMAIN,ad.bilibili.com,REJECT
+# e.bilibili.com：B 站营销/广告投放官网（「B 站广告，B 站投放，B 站营销」落地站；
+# XiaoQi 模块 REJECT）。拦掉后 App 内「广告合作」类外链可能打不开，不影响看视频。
+DOMAIN,e.bilibili.com,REJECT
+# adtrack.qianwen.com：第三方 App（通义千问）在 B 站投放广告时的转化追踪域
+# （BiliUniverse/ADBlock 的 privacy 段只拦其 /v3/ad/bilibili 路径；这里用域名层直接 REJECT）。
+# 仅影响广告转化统计，不影响 B 站自身业务。
+DOMAIN,adtrack.qianwen.com,REJECT
+# tkio-redirect.solar-engine.com：B 站开屏广告点击的第三方跳转/追踪域
+# （BiliUniverse/ADBlock 的 privacy 段拦其 /receive/turl/ 路径）。拦掉后广告落地页跳转失效，
+# 不影响正常链接；这是跨 App 的广告追踪域，会顺带拦掉其它 App 对它的请求。
+DOMAIN,tkio-redirect.solar-engine.com,REJECT
+
+# ---------- B. P2P CDN（不是广告域；默认启用，只减少「拿你上行带宽做 P2P 节点」） ----------
+# B 站视频/素材会走 P2P 分发，拦掉后客户端自动回退 upos 直连 CDN，通常无感；
+# 若发现视频加载明显变慢、直播卡顿，把本节两行注释掉。
+DOMAIN,mcdn.bilivideo.com,REJECT
+DOMAIN,mcdn.bilivideo.cn,REJECT
+
+# ---------- C. 可选 / 历史广告域（默认注释） ----------
+# 高能联盟（B 站广告联盟）域：正常业务是否复用未确认，先注释；想更彻底可取消注释：
+# DOMAIN,gaoneng.bilibili.com,REJECT
+# 社区模块（XiaoQi）单列的历史广告子域，本次复核 DNS 均已 NXDOMAIN，保留注释以防回归：
+# DOMAIN,cm.ad.bilibili.com,REJECT
+# DOMAIN,cm.adcommon.bilibili.com,REJECT
+# DOMAIN,cm.game.bilibili.com,REJECT
+
+# ==========================================================================
+# 第三部分：微博（新浪微博开屏/广告 SDK）
+# ==========================================================================
+# ─────────── A. 开屏预加载 / 广告 SDK（2026-10-29 真机日志证据，XiaoQi v1.9 也拦同族）───────────
+# A1. 旧 fanqie 模块 I 段迁入的三条（模块规则优先于配置文件，所以这里的 REJECT 会先生效）
+DOMAIN-SUFFIX,biz.weibo.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,uve.weibo.com,REJECT,extended-matching,pre-matching
+DOMAIN,mediadata.api.weibo.com,REJECT,extended-matching,pre-matching
+# 说明：上面两条 SUFFIX 已覆盖下列日志/XiaoQi 里的精确子域，无需重复列规则：
+#   uve.weibo.com：bootpreload / wbapp / sdkapp / bootrealtime / adimg / datacollection
+#   biz.weibo.com：adstrategy / sdkmonitor / sdkaction / sdkclick / brandvideo / kadmimage / vs.biz
+# 若哪天想收窄成「只拦精确子域」，把两条 SUFFIX 注释、改用下面注释里的 DOMAIN 行即可。
+
+# ─────────── B. 其它精确广告域（XiaoQi v1.9 抽规则；均为广告专用子域，默认启用）───────────
+DOMAIN,ad.weibo.com,REJECT,extended-matching,pre-matching
+DOMAIN,ad.us.sinaimg.cn,REJECT,extended-matching,pre-matching
+# ad.us.sinaimg.cn = 微博广告图片 CDN 子域（与正常图床 i0/i1.sinaimg.cn 不同子域）；
+# 若发现微博正文图片显示成灰块，先注释这一行。
+
+# ─────────── C. 候选（默认注释，需真机确认或存在误伤风险）───────────
+# 微博 HTTPDNS / 连接优化域：2026-10-29 日志显示 dns.weibo.cn 承载正常业务（连接建立阶段），
+# 拦掉一般会回落系统 DNS，但可能影响弱网首连速度，故默认不启用；想试再取消注释。
+#DOMAIN,dns.weibo.cn,REJECT,extended-matching,pre-matching
+# 微博视频广告 CDN（XiaoQi v1.9 拦）：与正常视频共用 weibocdn.com 族，只在确认是广告后再启用。
+#DOMAIN,dm.video.weibocdn.com,REJECT,extended-matching,pre-matching
+# 收窄方案（想只看日志证据、不要宽 SUFFIX 时用；取消 A1 两条 SUFFIX 后逐条启用）：
+#DOMAIN,bootpreload.uve.weibo.com,REJECT,extended-matching,pre-matching
+#DOMAIN,adstrategy.biz.weibo.com,REJECT,extended-matching,pre-matching
+#DOMAIN,sdkmonitor.biz.weibo.com,REJECT,extended-matching,pre-matching
+#DOMAIN,sdkaction.biz.weibo.com,REJECT,extended-matching,pre-matching
+#DOMAIN,sdkclick.biz.weibo.com,REJECT,extended-matching,pre-matching
+
+# ============================================================
+# 【安装】Shadowrocket → 配置 → 模块 → 右上角 + → 填写链接：
+#   https://cdn.jsdelivr.net/gh/HyPerP/shadowrocket-rules@main/extras/weibo-adblock.module
+# （jsDelivr 打不开时用 raw.githubusercontent.com 同路径。）确认模块启用、「全局路由」= 配置。
+# 不需要生成 CA、不需要开 HTTPS 解密。手机上若还装着旧 fanqie-novel-adblock.module，先删旧模块。
+#
+# 【验证】打开微博 → 等开屏 → 看日志：
+#   · bootpreload.uve.weibo.com / adstrategy.biz.weibo.com / sdkmonitor|sdkaction|sdkclick.biz.weibo.com
+#     / wbapp|sdkapp.uve.weibo.com / mediadata.api.weibo.com 应显示 REJECT；
+#   · 正常业务不受影响：api.weibo.cn、gateway.im.weibo.cn、weibo.com、i0.sinaimg.cn 仍按配置分流。
+#
+# 【不起作用的情况】开屏图片/文案若是由 api.weibo.cn 的启动接口（/2/client/launch 等）下发、
+# 图片走 sinaimg.cn，纯域名层拦不掉 —— 那需要 MITM + 响应体改写，本模块刻意不做。
+# 微博开屏是否明显改善要以真机多次冷启动为准。
+#
+# 【风险与回滚】
+# 1. biz.weibo.com / uve.weibo.com 是宽 SUFFIX：若微博出现「启动卡住/登录异常/消息不刷新」，
+#    先注释这两条 SUFFIX 换成 C 段的精确子域列表再测；
+# 2. 微博进程若对广告域有证书固定（pinning）也不影响：域名层 REJECT 在 TLS 握手之前断连；
+# 3. 停用/删除本模块即完全回滚（本模块不修改 DNS/代理/MITM，不影响其它 App）。
+#
+# 【迁移对照：旧 extras/fanqie-novel-adblock.module → 本模块】
+#  · 旧 I-1 DOMAIN-SUFFIX,biz.weibo.com,REJECT       → A1 同名（+extended-matching,pre-matching）
+#  · 旧 I-2 DOMAIN-SUFFIX,uve.weibo.com,REJECT       → A1 同名（+extended-matching,pre-matching）
+#  · 旧 I-3 DOMAIN,mediadata.api.weibo.com,REJECT    → A1 同名（+extended-matching,pre-matching）
+#  新增（上游/日志抽取）：B 段 ad.weibo.com、ad.us.sinaimg.cn；C 段为默认注释候选，不计入启用数。
+# 旧模块里的番茄/红果部分已迁到 extras/bytedance-adblock.module。
+#
+# 【来源与许可】
+# - 2026-10-29 真机日志复核（本地）：docs/log-analysis-2026-10-29.md
+# - SherryBX/XiaoQi-sgmodule v1.9（2026-10-11）：weibo 广告子域与精确域抽取
+#   https://github.com/SherryBX/XiaoQi-sgmodule
+# - 旧模块：extras/fanqie-novel-adblock.module v2（已退役，见 bytedance-adblock.module 头部说明）
+# - Shadowrocket 语法：docs/ref-LOWERTOP-Shadowrocket-manual.md
+# ============================================================
+
+[URL Rewrite]
+# ==========================================================================
+# URL 改写层：明文 HTTP 直接生效；HTTPS 需开启解密 + [MITM] 覆盖对应域名。
+# 顺序：先 B 站（开屏素材/接口/站内推广），后字节系（穿山甲/素材/直播拉流）。
+# 两组没有相同 URL 模式，互不影响。
+# ==========================================================================
+# ==========================================================================
+# 第一部分：B 站（开屏素材 / splash 接口 / 站内推广）
+# ==========================================================================
+# ============================================================
+# 本段 4 节：第 2 层素材、第 3 层开屏接口、第 4 层规则型加固、可选注释规则。
+# 左侧是 URL 正则，右侧是策略：
+#   reject      = 返回 404 空响应（素材/接口断供，App 自然跳过）
+#   reject-dict = 返回 200 + 空 JSON 对象（JSON 接口最安全，App 认为「没有数据」）
+# 改写 HTTPS 请求的前提：该配置已开启「HTTPS 解密」+ 已安装并信任自签 CA
+#   + 目标域名在 [MITM] 的 hostname 列表里。明文 HTTP 请求不需要解密。
+# ============================================================
+
+# ---- 第 2 层：开屏广告素材路径（明文 HTTP 不需要解密即可命中） ----
+# 日志证据：http://upos-sz-static.bilivideo.com/ssaxcode/4g/hz/n261028a21588zgagrz97h305qy2hz4g-1-SPLASH.mp4
+# 文档同形：http://upos-sz-static.bilivideo.com/ssaxcode/89/jl/n220831a21uql976d44zun4y0ykmjl89-1-SPLASH.mp4
+# v2 把 v1 的 upos-sz-static[^/]* 放宽为 upos-[^/]*（来源：XiaoQi 模块里
+# upos-sz-mirrorcos / upos-sz-302ppio / upos-sz-staticcos 也按 ssaxcode 开屏素材规则处理），
+# 只匹配 /ssaxcode/ 目录，不影响 upos 上正常视频分片。
+^https?:\/\/upos-[^\/]*\.bilivideo\.com\/ssaxcode(?:\/|\?|$) - reject
+# 收窄备选（只拦开屏视频文件，其余 /ssaxcode/ 放行）：
+# ^https?:\/\/upos-[^\/]*\.bilivideo\.com\/ssaxcode\/[^?]*-SPLASH\.mp4 - reject
+# 历史开屏素材专用子域（bilibili-API-collect 2019 年示例 ssaxcode-upos-hz-cdn.acgvideo.com，
+# 当前已 NXDOMAIN，正常无需启用）：
+# ^https?:\/\/ssaxcode-[A-Za-z0-9.-]+\.(?:acgvideo|bilivideo)\.com\/ - reject
+
+# ---- 第 3 层：开屏广告接口（必须开启 HTTPS 解密） ----
+# blackmatrix7 / deezertidal(bm7) 验证过的写法：返回 200 + 空 JSON，让 App 认为「没有开屏广告」。
+# 下面一条「splash 前缀兜底」一次覆盖整系接口，包括：
+#   /x/v2/splash/show         开屏展示（bm7 规则原形：^https://app.bilibili.com/x/v2/splash/show - reject-dict）
+#   /x/v2/splash/list         开屏广告列表（含 enable_pre_download 预下载开关，控制 SPLASH.mp4 下载）
+#   /x/v2/splash/brand/list   开屏品牌/默认图列表
+#   /x/v2/splash/event/list2  BiliUniverse/ADBlock 脚本覆盖的新版曝光上报接口
+#   /x/v2/splash/event 等     其余上报/配置子路径
+^https?:\/\/app\.bilibili\.com\/x\/v2\/splash(?:\/|\?|$) - reject-dict
+# api.bilibili.com 兜底（部分版本 / AB 实验下开屏接口可能走这个域；它也是正常 API 域，
+# 只有命中 /x/v2/splash 路径才改写，其它 API 请求原样放行）。
+^https?:\/\/api\.bilibili\.com\/x\/v2\/splash(?:\/|\?|$) - reject-dict
+
+# 保守备选（只想拦「广告接口」、保留 brand/list 官方默认开屏图时用）：
+#   把上面第一条 app.bilibili.com 前缀兜底注释掉，改用下面这条：
+# ^https?:\/\/app\.bilibili\.com\/x\/v2\/splash\/(?:show|list)(?:\?|$) - reject-dict
+
+# ---- 第 4 层：规则型广告/推广拦截（v2 新增；全部需 HTTPS 解密） ----
+# 以下规则都来自社区成熟模块的「规则型」部分（URL Rewrite / Map Local），来源见每行上方注释；
+# 统一返回 200 + 空 JSON（reject-dict），不改写响应体、不执行脚本。
+
+# 首页右上角运营活动入口（deezertidal/biliad.module @ddgksf2013，原注释「卸载重装」：
+# 活动位可能有本地缓存，启用后若短时间仍显示，卸载重装或清缓存后再看）。
+# 风险：右上角活动图标/入口消失，不影响视频、搜索、登录。
+^https?:\/\/app\.bilibili\.com\/x\/resource\/top\/activity(?:\/|\?|$) - reject-dict
+
+# 搜索默认词（deezertidal/biliad.module @ddgksf2013：x/v2/search/defaultwords - reject-dict）。
+# 风险：搜索框里的默认推荐词/搜索发现变空，搜索功能本身正常。
+^https?:\/\/app\.bilibili\.com\/x\/v2\/search\/defaultwords(?:\?|$) - reject-dict
+
+# VIP / 广告素材上报（deezertidal/biliad.module @ddgksf2013 + XiaoQi 模块同名规则）。
+# 纯广告素材上报，拦掉不影响 VIP 视频播放。
+^https?:\/\/(?:app|api)\.bilibili\.com\/x\/vip\/ads\/material\/report(?:\?|$) - reject-dict
+
+# PGC 播放器「小卡片广告」（deezertidal/biliad.module @ddgksf2013：pgc/season/player/cards）。
+# 风险：播放页广告小卡片消失；若你希望保留某些互动卡片，可注释本行。
+^https?:\/\/api\.bilibili\.com\/pgc\/season\/player\/cards(?:\?|$) - reject-dict
+
+# 搜索「大家都在搜」推荐词（BiliUniverse/ADBlock Map Local {} + deezertidal 同名规则）。
+# 需要额外的 MITM：api.vc.bilibili.com（见 [MITM]）。风险：搜索页「大家都在搜」模块消失。
+^https?:\/\/api\.vc\.bilibili\.com\/search_svr\/v\d\/Search\/recommend_words(?:\?|$) - reject-dict
+
+# 动态页话题模块（BiliUniverse/ADBlock Map Local {} + deezertidal 同名规则）。
+# 风险：动态页顶部/卡片中的话题模块消失，动态本身正常加载。
+^https?:\/\/api\.vc\.bilibili\.com\/topic_svr\/v1\/topic_svr(?:\?|$) - reject-dict
+
+# 哔哩哔哩漫画开屏/横幅 Flash 广告（deezertidal/biliad.module + XiaoQi 模块同名规则）。
+# 需要额外的 MITM：manga.bilibili.com（见 [MITM]）；只影响漫画 App/漫画页的广告条。
+^https?:\/\/manga\.bilibili\.com\/twirp\/comic\.v\d\.Comic\/(?:Flash|ListFlash)(?:\?|$) - reject-dict
+
+# ---- 可选：不确定 / 需额外条件的规则（默认注释，写明原因） ----
+# 1) 开屏冷启动延迟数据（XiaoQi 模块启用，社区称「启动页净化」；可能含开屏/弹窗数据，
+#    但也可能承载启动预载内容，未在解密日志中确认，先注释待真机验证）：
+# ^https?:\/\/(?:app|api)\.bilibili\.com\/bilibili\.app\.coldstart\.v1\.ColdStart\/GetColdStartDeferredData(?:\?|$) - reject
+# ^https?:\/\/grpc\.biliapi\.net\/bilibili\.app\.coldstart\.v1\.ColdStart\/GetColdStartDeferredData(?:\?|$) - reject
+# 2) 搜索默认词的 gRPC 版本（deezertidal 用 Search/Default - reject；新版 App 可能走 gRPC，
+#    直接 404 可能让搜索页默认词区域报错，需验证；启用前请同步把 grpc.biliapi.net 加入 MITM）：
+# ^https?:\/\/app\.bilibili\.com\/bilibili\.app\.interface\.v1\.Search\/Default(?:\/|\?|$) - reject
+# 3) 首页 feed 冷启动预载（XiaoQi 模块；可能影响首页首屏加载，先注释）：
+# ^https?:\/\/app\.bilibili\.com\/x\/v2\/feed\/coldstart(?:\?|$) - reject
+# 4) B 站 IP / 地区提示接口（deezertidal 模块；可能影响播放、版权/IP 地区提示，先注释观察）：
+# ^https?:\/\/app\.bilibili\.com\/x\/resource\/ip(?:\?|$) - reject
+# 5) VIP 广告素材列表（BiliUniverse/ADBlock 用响应脚本处理；此处 reject-dict 返回 {}，
+#    可能让会员购/VIP 页局部空白，需真机验证）：
+# ^https?:\/\/api\.bilibili\.com\/x\/vip\/ads\/materials(?:\?|$) - reject-dict
+# 6) PGC 相关推荐中的推广（deezertidal 标注「可能的一些推广(beta)」；可能连正常相关推荐一起消失）：
+# ^https?:\/\/api\.bilibili\.com\/pgc\/season\/app\/related\/recommend\?(?:.*) - reject-dict
+# 7) 搜索热搜/搜索发现（deezertidal 热搜发现脚本，社区模块也有 Map Local {} 同路径写法；
+#    属于运营内容而非严格广告，返回 {} 会让搜索页热搜榜空白）：
+# ^https?:\/\/app\.bilibili\.com\/x\/v2\/search\/square(?:\?|$) - reject-dict
+# 8) 直播带货商品信息（BiliUniverse/ADBlock Map Local {}；属于直播页改动，
+#    且需额外解密 api.live.bilibili.com，默认不启用）：
+# ^https?:\/\/api\.live\.bilibili\.com\/xlive\/e-commerce-interface\/v1\/ecommerce-user\/get_shopping_info(?:\?|$) - reject-dict
+# 9) 高能联盟广告页（XiaoQi 模块；需额外解密 gaoneng.bilibili.com）：
+# ^https?:\/\/gaoneng\.bilibili\.com\/tetris\/page\/.*adtype=CPM.* - reject
+# 10) 会员购广告配置（XiaoQi 模块；可能影响会员购页配置加载）：
+# ^https?:\/\/mall\.bilibili\.com\/mall-c-search\/app\/config\/all(?:\?|$) - reject-dict
+# 11) 推送广播展示（XiaoQi 模块；可能影响推送通知展示方式）：
+# ^https?:\/\/api\.bilibili\.com\/x\/push\/broadcast\/display(?:\?|$) - reject-dict
+# 12) 弹幕曝光上报（XiaoQi 模块；纯上报，拦掉只少一条统计）：
+# ^https?:\/\/api\.bilibili\.com\/x\/v2\/dm\/exposure(?:\?|$) - reject-dict
+# 13) 增值广告开关接口（XiaoQi 模块；语义未确认，先注释）：
+# ^https?:\/\/api\.bilibili\.com\/x\/vas_ads_open(?:\?|$) - reject-dict
+# 14) 图片版开屏/广告图素材路径（XiaoQi 模块：i0/i1/boss.hdslb.com 的 /bfs/splash、/bfs/ad、
+#    /bfs/sycp_brand、/bfs/sycp/creative_img）。注意：需要额外解密 i0/i1/boss.hdslb.com 图片 CDN，
+#    与正常图片同域、流量很大，解密开销和误伤风险都高；且第 3 层接口断供后图片版开屏通常已消失，
+#    所以默认不启用，仅列在这里供需要时参考：
+# ^https?:\/\/i\d\.hdslb\.com\/bfs\/(?:splash|ad)\/ - reject
+# ^https?:\/\/boss\.hdslb\.com\/bfs\/(?:splash|ad)\/ - reject
+# ^https?:\/\/i\d\.hdslb\.com\/bfs\/sycp_brand - reject
+# ^https?:\/\/i\d\.hdslb\.com\/bfs\/sycp\/creative_img - reject
+# 15) B 站广告接口（easylistchina 的 ||api.bilibili.com/x/ad/；与开屏非强相关，想更彻底可启用）：
+# ^https?:\/\/api\.bilibili\.com\/x\/ad\/ - reject-dict
+
+# ==========================================================================
+# 第二部分：字节系（番茄 + 红果）
+# ==========================================================================
+# ============================================================
+# 左侧是 URL 正则，右侧是策略：reject = 返回 404 空响应（用于素材/流地址）。
+# · 明文 HTTP 请求不需要证书即可命中（R1 红果直播拉流主要靠这个）；
+# · HTTPS 请求需要：该配置已开启「HTTPS 解密」+ 已信任自签 CA + 域名在 [MITM] 中；
+#   未开启解密时这些规则静默不生效（不报错），第 1 层不受影响。
+# ============================================================
+
+# ─────────── R1. 红果直播广告拉流 kill（v1.3 宽匹配；明文 HTTP，免证书）───────────
+# 实测三形态（杀一条换一条）：
+#   A. http://<IP>/pull-flv-h1.douyincdn.com/third/stream-*.flv（域名藏路径、裸 IP 直连）
+#   B. http://pull-flv-q1.douyincdn.com/third/stream-*.flv（域名直连）
+#   C. http://<IP>/pull-q3.douyincdn.com/stage/stream-*.flv（阿里线路 + stage 路径）
+# 默认只拦「裸 IP + 域名藏路径」形态（实测广告主力形态，示例 A/C），不影响抖音 App 的正常直播域名；
+# 域名直连形态（示例 B）与广告拉流同形态、会连带断掉本机抖音/头条直播，故默认注释（见下方宽匹配行）。
+# 显式不含 pull-lls*（长连接推送，拦了误伤）。
+^https?:\/\/\d{1,3}(?:\.\d{1,3}){3}\/pull-(?:flv|hls|q)[^\/]*\.douyincdn\.com\/ - reject
+# 宽匹配（示例 B，域名直连）：会同时断掉本机抖音/头条直播，确认只在这台机看红果时再启用：
+#^https?:\/\/(?:[^\/]+\/)?pull-(?:flv|hls|q)[^\/]*\.douyincdn\.com\/ - reject
+# 备用位 1：.sdp 拉流兜底（RTM 形态，反编译 VideoLiveManager.smali 实证；默认关闭）
+#^https?:\/\/(?:[^\/]+\/)?pull-[^\/]*\.douyincdn\.com\/[^?#]*\.sdp - reject
+# 备用位 2：最后手段（广告改走 pull-lls 或其他 pull-* 线路时启用；会断字节系消息推送）
+#^https?:\/\/(?:[^\/]+\/)?pull-[^\/]*\.douyincdn\.com\/ - reject
+
+# ─────────── R2. 开屏/活动素材包下发（红果 v1.2 起用 v\d 宽匹配，覆盖原 v3）───────────
+^https?:\/\/gurd\.snssdk\.com\/src\/server\/v\d\/package - reject
+
+# ─────────── R3. 穿山甲广告 SDK 接口（原 fanqie 模块；需解密）───────────
+^https?:\/\/[A-Za-z0-9.-]+\.pangolin-sdk-toutiao\.com\/api\/ad\/union\/sdk\/(?:get_ads|stats|settings)(?:\/|\?|$) - reject
+^https?:\/\/.+\.pangolin-sdk-toutiao\.com\/api\/ad\/union\/sdk\/(get_ads|stats|settings)\/ - reject
+
+# ─────────── R4. 字节广告素材 / 渲染路径（原 fanqie 模块；需解密）───────────
+^https?:\/\/[A-Za-z0-9.-]+\.(?:pglstatp-toutiao|pstatp)\.com\/(?:obj|img)\/(?:ad-app-package|ad)\/ - reject
+^https?:\/\/[A-Za-z0-9.-]+\.(?:pglstatp-toutiao|pstatp)\.com\/(?:obj|img)\/web\.business\.image\/ - reject
+^https?:\/\/[A-Za-z0-9.-]+\.(?:pglstatp-toutiao|pstatp)\.com\/obj\/ad-pattern\/renderer(?:\/|\?|$) - reject
+^https?:\/\/[A-Za-z0-9.-]+\.(?:pglstatp-toutiao|pstatp)\.com\/obj\/ad-site-adstyle-public\/ - reject
+^https?:\/\/[A-Za-z0-9.-]+\.(?:pglstatp-toutiao|pstatp)\.com\/(?:ad-app-package|ad)\/ - reject
+^https?:\/\/[A-Za-z0-9.-]+\.byteimg\.com\/(?:ad-app-package|web\.business\.image)\/ - reject
+# 注意：URL Rewrite 在规则引擎之前求值，所以这里用负向前瞻把 p3-ad-sign（A3 的正片签名白名单）
+# 排除掉，否则开解密后 p3 的正常签名图会被这一行直接 reject、绕过 A3 的 DIRECT。
+^https?:\/\/(?!p3-ad-sign\.)[A-Za-z0-9-]*ad-sign[A-Za-z0-9-]*\.byteimg\.com\/ - reject
+^https?:\/\/.+\.byteimg.com/tos-cn-i-1yzifmftcy\/(.+)-jpeg\.jpeg - reject
+^https?:\/\/.+\.pglstatp-toutiao\.com\/.+\/toutiao\.mp4 - reject
+^https?:\/\/[A-Za-z0-9.-]+\.pstatp\.com\/obj\/mosaic-legacy\/[^?]*\?(?:[^#]*&)?from=ad(?:&|$) - reject
+^https?:\/\/[A-Za-z0-9.-]+\.pstatp\.com\/bytecom\/resource\/track_log\/src\/ - reject
+^https?:\/\/.+\.pstatp\.com\/bytecom\/resource\/track-log\/src\/.+ - reject
+
+# ─────────── R5. 字节视频播放 / 广告接口（原 fanqie 模块；需解密）───────────
+^https?:\/\/[A-Za-z0-9.-]+\.snssdk\.com\/api\/ad\/ - reject
+^https?:\/\/.+\.snssdk.com\/api\/ad\/.+ - reject
+^https?:\/\/[A-Za-z0-9.-]+\.snssdk\.com\/video\/play\/1\/toutiao\/ - reject
+^https?:\/\/.+\.snssdk\.com\/video\/play\/1\/toutiao\/.+\/mp4 - reject
+^https?:\/\/.+?\.snssdk\.com\/motor\/operation\/activity\/display\/config\/V2\/ - reject
+
+# ─────────── R6. 电商/开屏活动接口（原 fanqie 模块；需解密）───────────
+^https?:\/\/adim\.pinduoduo\.com\/[^?]+\/toutiao\? - reject
+
+# ─────────── R7. 番茄音视频路径（原 fanqie 模块；需解密）───────────
+^https?:\/\/[A-Za-z0-9-]+-novelapp\.ixigua\.com\/ - reject
+# 候选（默认注释）：原 fanqie 模块启用，但注释自己写着「未 iPhone 实机验证，可能误伤听书」。
+# 现在正片保护是本模块的第一原则，故降级为注释；确认某些 audio/tts/video 路径是广告后再启用。
+#^https?:\/\/(?:[A-Za-z0-9-]+\.)*(?:fqnovel|fanqienovel|changdunovel)\.com\/(?:[^/?]+\/)*(?:audio|tts|video)(?:\/|\?|$) - reject
+
+[MITM]
+# %APPEND% = 追加到主配置解密名单（不覆盖配置/其它模块里的 hostname）。
+# 只列「已启用规则真正需要」的 15 组域名：
+#   B站：app./api./api.vc./manga.bilibili.com + 两个 upos 素材域（第 3/4 层与 https 素材）
+#   字节系：pangolin/pglstatp/pstatp/byteimg/snssdk + adim.pinduoduo + *-novelapp.ixigua + fqnovel.com
+# 开启解密前建议先读文件头部的风险说明；只需红果/微博去广告的用户不要开解密。
+hostname = %APPEND% *.pangolin-sdk-toutiao.com,*.pglstatp-toutiao.com,*.pstatp.com,*.byteimg.com,*.snssdk.com,adim.pinduoduo.com,*-novelapp.ixigua.com,fqnovel.com,*.fqnovel.com,app.bilibili.com,api.bilibili.com,api.vc.bilibili.com,manga.bilibili.com,upos-sz-static.bilivideo.com,upos-sz-staticcos.bilivideo.com
+
+[Script]
+# 默认不启用任何第三方脚本。下面是红果上游「穿山甲 get_ads 无填充信封」脚本的可选写法，
+# 来源 qq2519157/adblock-modules scripts/hongguo_ads.js（MIT © 2026 logan）；实测 Cronet 大概率无效，
+# 启用前请自行审查脚本内容并确认 [MITM] 已覆盖对应域名。
+# 默认不启用任何第三方 [Script]。下面是红果上游的「穿山甲 get_ads 无填充信封」脚本，
+# 仅作为注释可选块保留（原 fanqie 模块的做法是只给说明、不启用；这里给出可直接粘贴的写法）。
+#
+# 来源：qq2519157/adblock-modules scripts/hongguo_ads.js（MIT License © 2026 logan），
+#       改编自 app2smile/rules js/adsense.js 的穿山甲分支；官方错误码 20001 / reason 112。
+# 作用：响应含 message 字段（=有广告）时，把响应体替换为官方「无填充」信封，让 SDK 认为没广告，
+#       而不是网络错误（红果 v1.2 发现断连会让 SDK 反复重试，反而更耗电）。
+# 风险：1) 需要 MITM 才能生效，而红果/番茄的 TTNet Cronet 拒绝用户 CA（红果 v1.4 已定案），
+#         实测大概率无效；2) 远程脚本内容会随上游变化，启用前请自行审查；
+#       3) 脚本异常时 SDK 可能重试/耗电。
+# 想试：取消下面一行注释，并确认 [MITM] 已解密对应域名、CA 已信任。
+#HongGuo_AdEnvelope = type=http-response, pattern=^https?:\/\/(?:[^\/]*pangolin-sdk-toutiao[^\/]*|is\.snssdk\.com)\/api\/ad\/, requires-body=true, script-path=https://raw.githubusercontent.com/qq2519157/adblock-modules/main/scripts/hongguo_ads.js, script-update-interval=86400
+
+[Host]
+# 可选 DNS 黑洞写法（全部注释、默认不启用）。Shadowrocket 语法：
+#   本地映射：example.com = 1.2.3.4     指定 DNS：example.com = server:1.2.3.4
+# 本模块的域名规则已覆盖这些域，一般不需要启用；确需 DNS 层拦截时逐条去注释并真机验证。
+#dig.bdurl.net = 127.0.0.1
+#dig.zjurl.cn = 127.0.0.1
+#mon.toutiaocloud.net = 127.0.0.1
+#mon.toutiaocloud.com = 127.0.0.1
+#zlink.ugsdk.cn = 127.0.0.1
+
+# ============================================================
+# 【安装】
+# 1. Shadowrocket → 底部「配置」→「模块」→ 右上角 + → 「填写链接」→
+#    https://cdn.jsdelivr.net/gh/HyPerP/shadowrocket-rules@main/extras/bytedance-adblock.module
+#    （jsDelivr 打不开时用 raw.githubusercontent.com 同路径地址）；
+# 2. 确认模块已启用、「全局路由」= 配置；
+# 3. 只需红果去广告：到此为止，不要开 HTTPS 解密（红果部分全部生效）；
+# 4. 还想要番茄第 3 层：按 README「HTTPS 解密」生成/信任自签 CA，再打开当前配置的 HTTPS 解密开关；
+# 5. 手机上若还装着旧的 extras/fanqie-novel-adblock.module 本地模块，先删掉再装本模块，避免规则叠加。
+#
+# 【不起作用 / 不生效的规则】
+# · 不开 HTTPS 解密时，「不生效」的只有：I 段 5 条 URL-REGEX（需要看到完整 URL 才能匹配）、
+#   [URL Rewrite] R3–R7（HTTPS 接口/素材）；R2 的 gurd 也是 HTTPS（需解密）；R1 是明文 HTTP，不需要解密。
+# · 红果的全部规则（A/B/C/D/E/F/G/H/K + R1）都不依赖 MITM —— 这是上游「MITM 路线关闭」定案的直接结果。
+# · 若 URL 改写命中后行为异常：先关该配置的 HTTPS 解密（退回纯域名层），不生效的规则会静默失效、不会报错。
+#
+# 【验证（真机，2026-10-29/30 已有日志证据）】
+# 1. 番茄广告视频：日志里 v9/v26/v11-novelapp.fqnovelvod.com 应为 REJECT（A2 段）；正常视频/听书
+#    v*-reading-video*/xl 等应命中 A3 的 DIRECT（不再整域拒绝）。
+# 2. 红果拉流：http://<IP>/pull-flv-h1.douyincdn.com/third/stream-*.flv、pull-q3.../stage/... 应为 REJECT
+#    （R1 段）；正片 v5-se2-alismart-reading-video.qznovelvod.com 应为 DIRECT（A3 段）。
+# 3. httpdns：dig.bdurl.net / dig.zjurl.cn 应 REJECT（B 段）；101.36.166.16-19 命中 IP-CIDR。
+# 4. 穿山甲 get_ads：开解密后 https://<子域>.pangolin-sdk-toutiao.com/api/ad/union/sdk/get_ads 应为 REJECT
+#    （R3 段，rewrite 优先级高于规则引擎）；不开解密则靠 E 段域名 REJECT 在 TLS 握手前断连。
+# 5. 抖音/头条异常：本模块会拦全局 snssdk/穿山甲域名（预期），停用模块即可回滚。
+# 6. 快速自测：开解密后 Safari 访问 https://i.snssdk.com/api/ad/ 应显示 404（reject 生效）。
+#
+# 【风险与回滚】
+# 1. 番茄/红果打不开、一直转圈：大概率是开了 HTTPS 解密但 App 的 Cronet 拒绝用户 CA。
+#    处置：关闭该配置的 HTTPS 解密（第 1 层仍有效）→ 还不行就停用本模块。
+# 2. 红果商城/小游戏入口消失：注释 D3 段（电商推广位）/ D1 的 minigame 两行。
+# 3. 红果/抖音内跳直播间失效：C 段 + R1 的预期代价；想保留直播观看就注释 C 段和 R1。
+# 4. 番茄推送通知异常：注释 H2 段 frontier100-toutiao-lf 那一行。
+# 5. 番茄登录/书架同步异常：H1 段 i*.snssdk.com 几行是统计接口，可逐行注释；若误伤内容接口，
+#    检查是否有人把 A3 的 api*-normal 白名单注释掉了。
+# 6. 微博广告规则不在本模块：见 extras/weibo-adblock.module。
+#
+# 【来源与许可】
+# - qq2519157/adblock-modules（红果短剧 v1.4，2026-10-28，MIT License © 2026 logan）：
+#   https://github.com/qq2519157/adblock-modules —— 正片 DIRECT 白名单顺序、[Host] 黑洞思路、
+#   直播信令域、拉流 kill、HTTPDNS 旁路、埋点机房变通配、随机子域 CDN 列表的来源；
+#   本模块按 MIT 许可二次分发其规则，许可证原文：https://github.com/qq2519157/adblock-modules/blob/main/LICENSE
+# - q85985477/shadowrocket-modules modules/Fanqie-AdBlock.module（2026-09-18）：
+#   番茄域名/URL 改写基础规则；https://github.com/q85985477/shadowrocket-modules
+# - SherryBX/XiaoQi-sgmodule（v1.9，2026-10-11）：番茄 URL-REGEX、H4 段埋点精确域；
+#   https://github.com/SherryBX/XiaoQi-sgmodule
+# - 本地真机日志：docs/log-analysis-2026-10-29.md；Shadowrocket 语法：docs/ref-LOWERTOP-Shadowrocket-manual.md
+#
+# 【迁移对照：旧 extras/fanqie-novel-adblock.module（v2）→ 本模块】
+# 旧文件共 118 条启用规则（94 条 [Rule] + 23 条 URL Rewrite + 1 条 [MITM] hostname）+
+# 5 条注释候选；规则文本已全部迁移（微博 3 条迁到 weibo-adblock.module）。**注意**：有 3 处是
+# 刻意收窄/降级（不是丢失，按「正片保护优先」原则）：
+#   ① 更早版本日志里启用过的 fqnovelvod.com / zijieapi.com 整域 REJECT，现收窄为精确广告子域/接口
+#      （避免误伤正片与 mssdk/imapi 等业务接口）；
+#   ② R7「fqnovel audio/tts/video」降级为注释（旧模块自注可能误伤听书）；
+#   ③ 2026-10-30 QA 将全局 DOMAIN-KEYWORD,httpdns、R1 宽匹配、两条 ixigua URL-REGEX 默认注释。
+#  · 旧 A-1 p6-ad-sign / A-2 p9-ad-sign        → F1 DOMAIN-WILDCARD,p*-ad-sign.byteimg.com,REJECT
+#  · 旧 A-3 frontier100-toutiao-lf.fqnovel.com → H2 同名规则（保留；上游只白名单 -lq 机房）
+#  · 旧 A-4 mon11-misc-lq.fqnovel.com          → H2 原样保留 + DOMAIN-WILDCARD,mon*-misc*.fqnovel.com 覆盖
+#  · 旧 A-5 activity-ag.awemeughun.com         → F2
+#  · 旧 A-6 sf3-ttcdn-tos.pstatp.com           → F2
+#  · 旧 A-7 dig.bdurl.net                      → B
+#  · 旧 B-1..B-18 穿山甲/Pangle 18 条           → E 原样 18 条
+#  · 旧 C-1..C-17 统计/日志 17 条               → H1 原样（tnc3-alisc1/aliec2.snssdk.com 两条 → D2）
+#  · 旧 C-18..C-19 (2 条 TNC snssdk)            → D2
+#  · 旧 D-1 v*-novelapp*.fqnovelvod.com        → A2
+#  · 旧 D-2 v*-ad*.fqnovelvod.com              → A2
+#  · 旧 D-3（注释）DOMAIN-SUFFIX,fqnovelvod    → A2 注释兜底（保留）
+#  · 旧 D-4 novelapp.ixigua.com / D-5 v6-... / D-6 default.ixigua.com → G
+#  · 旧 E-1..E-5 5 条 URL-REGEX                → I 原样（域名层等价升级见 G/H）
+#  · 旧 H-1..H-4 ads*/minigame* 4 条           → D1
+#  · 旧 H-5..H-8 tnc3/tnc0 zijieapi 4 条       → D2
+#  · 旧 H-9..H-10 tnc*-bjlgy*.zijieapi/bytedance → D2
+#  · 旧 H-11 applog-lf.fqnovel.com 关键词       → H2
+#  · 旧 H-12..H-14 mon*-misc/log*-applog/rtlog*-applog → H2
+#  · 旧 H-15 miaozhen.com                      → H5
+#  · 旧 H-16（注释）bytedance.com              → L 注释（保留）
+#  · 旧 I-1..I-3 微博 3 条                     → weibo-adblock.module A 段（本模块不含微博）
+#  · 旧 J-1..J-15 zlink/签名图床/随机 CDN 15 条 → F2/F3（p3-mgsdk-sign/p9-mgsdk-sign/p1-luckycatopen/
+#    p*-developer-sign 为 F1）
+#  · 旧 F-1..F-6 6 条 IP-CIDR                  → B（101.36.166.16/30、180.96.2.114）+ J（其余 4 条）
+#  · 旧 F-7 dig.zjurl.cn                       → B
+#  · 旧 G-1（注释）apd-pcdnwxlogin / G-2 msync-im1 → L 注释（保留）
+#  · 旧 G-3（注释）DOMAIN-KEYWORD,httpdns      → B「注释」（红果 v1.4 依据；需要更激进时启用，见 B 段）
+#  · 旧 URL Rewrite 23 条                      → R3–R7 共 21 条原样（其中 ad-sign 一条加负向前瞻排除
+#    p3-ad-sign，避免违反 A3 白名单）+ R2 gurd（v3→v\d 加宽）+ R7 番茄音视频
+#    1 条原样 + 1 条「fqnovel audio/tts/video」降级为注释（旧模块自己标注可能误伤听书，见 R7）
+#  · 迁移时做的三处冲突修复：p6/p9-ad-sign 并入 p*-ad-sign 通配（F1）；mon11-misc-lq 保留精确行
+#    并另有通配（H2）；ad-sign URL 改写加 p3 负向前瞻（R4）。
+#  · 旧 [MITM] hostname 1 条（14 组域名）      → [MITM] 原样（仍是「可选」层）
+# ============================================================
