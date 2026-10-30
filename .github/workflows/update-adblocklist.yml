@@ -1,0 +1,42 @@
+# 每 8 小时从 217heidai/adblockfilters 的 Releases 拉取最新纯域名列表，
+# 清洗 + 合并 Johnshall 独有域名后更新本仓库的 extras/adblock-217heidai-domains.list。
+#
+# 说明：
+#   - 采用「amend + force push」方式保持仓库只有 1 个提交，避免 5 MB 文件每天提交导致仓库膨胀；
+#   - 本仓库只被这个工作流写入，force push 是安全的；
+#   - 需要仓库 Settings → Actions → Workflow permissions 为 "Read and write"，workflow 里也显式声明了 contents: write。
+name: update-adblock-domains
+
+on:
+  schedule:
+    - cron: "0 */8 * * *"   # 每 8 小时（UTC）；GitHub 定时任务可能有几分钟延迟
+  workflow_dispatch:        # 也可以手动触发
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Sync adblock domain list
+        run: python tools/sync_adblocklist.py
+
+      - name: Amend commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add extras/adblock-217heidai-domains.list
+          if git diff --cached --quiet; then
+            echo "no change"
+          else
+            git commit --amend --no-edit
+            git push --force-with-lease origin HEAD:main
+          fi
