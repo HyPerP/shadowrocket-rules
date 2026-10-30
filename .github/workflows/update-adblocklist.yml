@@ -5,7 +5,7 @@
 #   - 采用「amend + force push」方式保持仓库只有 1 个提交，避免 5 MB 文件每天提交导致仓库膨胀；
 #   - 本仓库只被这个工作流写入，force push 是安全的；
 #   - 需要仓库 Settings → Actions → Workflow permissions 为 "Read and write"，workflow 里也显式声明了 contents: write。
-name: update-adblock-domains
+name: update-adblocklist
 
 on:
   schedule:
