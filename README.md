@@ -31,7 +31,7 @@ DOMAIN-SET,https://raw.githubusercontent.com/HyPerP/shadowrocket-rules/main/extr
 
 ## App 去广告模块（单文件通用版，2026-10-30）
 
-`extras/adblock.module`：把 **B 站 + 番茄小说/红果短剧 + 微博** 的 App 专项广告合并为一个通用模块
+`extras/adblock.module`：把 **B 站 + 番茄小说/红果短剧 + 微博 + APP 启动页开屏（约 188 个 App）** 的 App 专项广告合并为一个通用模块
 （域名规则 + URL 改写 + 可选 MITM；默认不启用任何第三方脚本、不含证书）。
 
 - Shadowrocket 使用：配置 → 模块 → 右上角 `+` → 填写链接 →
@@ -41,3 +41,5 @@ DOMAIN-SET,https://raw.githubusercontent.com/HyPerP/shadowrocket-rules/main/extr
 - 校验工具：`tools/validate_modules.py`（`python tools/validate_modules.py --dir extras`）；
   `.github/workflows/validate-modules.yml` 会在 push 时自动校验模块语法。
 - 需要 HTTPS 解密的只有 B 站第 3/4 层与番茄 HTTPS 改写层；红果/微博/B站第 1、2 层不需要。
+
+> 2026-11-02 更新：追加 APP 启动页/开屏广告规则（整合 deezertidal/shadowrocket-rules 的 startingad.module，253 条 URL 改写，约 188 个 App）；模块 [MITM] 增至 249 组域名，不开 HTTPS 解密时该部分不生效。
