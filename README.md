@@ -32,7 +32,7 @@ DOMAIN-SET,https://raw.githubusercontent.com/HyPerP/shadowrocket-rules/main/extr
 ## App 去广告模块（单文件通用版，2026-10-30）
 
 `extras/adblock.module`：把 **B 站 + 番茄小说/红果短剧 + 微博 + APP 启动页开屏（约 188 个 App）** 的 App 专项广告合并为一个通用模块
-（域名规则 + URL 改写 + 可选 MITM；默认不启用任何第三方脚本、不含证书）。
+（域名规则 + URL 改写 + 可选 MITM；默认启用 B站脚本（其余 App 不使用脚本）、不含证书）。
 
 - Shadowrocket 使用：配置 → 模块 → 右上角 `+` → 填写链接 →
   `https://cdn.jsdelivr.net/gh/HyPerP/shadowrocket-rules@main/extras/adblock.module`
