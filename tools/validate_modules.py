@@ -26,7 +26,8 @@ validate_modules.py — 校验 extras/*.module（Shadowrocket 模块）语法与
 5. [URL Rewrite] 行：`pattern - reject|reject-dict|...` 或 `pattern target 302|307`，
    正则必须能编译；
 6. [MITM]：模块内 hostname 必须带 `%APPEND%`；禁止 ca-p12/ca-passphrase 等证书私钥字段；
-7. 默认禁止启用状态的第三方脚本（script-path），可选 `--allow-scripts` 放行；
+7. 脚本：`script-path` 只允许白名单来源（当前 app2smile/rules）且必须 https；
+   白名单外默认报错，可用 `--allow-scripts` 放行全部（谨慎）；
 8. 跨模块冲突：同一域名在不同模块里一个 DIRECT 一个 REJECT（或 DOMAIN 落在
    对向策略的 DOMAIN-SUFFIX 之下）→ 报错；同模块内重复规则、多模块重复 URL 改写 → 提示。
 
@@ -120,6 +121,13 @@ HOSTNAME_ITEM_RE = re.compile(r"^[A-Za-z0-9_.*?*-]+$")
 URL_REWRITE_RE = re.compile(r"^(?P<pat>.+?)\s+-\s+(?P<action>[A-Za-z0-9-]+)$")
 URL_REWRITE_302_RE = re.compile(r"^(?P<pat>.+?)\s+(?P<target>\S+)\s+(?P<code>30[27])$")
 SCRIPT_PATH_RE = re.compile(r"(?<![#\s])script-path\s*=")
+SCRIPT_PATH_URL_RE = re.compile(r"script-path\s*=\s*(https?://[^,\s]+)")
+# 允许的第三方远程脚本前缀（来源仓库白名单）；不在白名单且未加 --allow-scripts 时仍报错
+TRUSTED_SCRIPT_PREFIXES = (
+    "https://raw.githubusercontent.com/app2smile/rules/",
+    "https://github.com/app2smile/rules/",
+)
+
 CA_KEYS = ("ca-p12", "ca-passphrase", "ca-cert")
 GENERIC_TLDS = {"com", "net", "org", "cn", "tv", "io", "co", "me", "info", "xyz", "top", "cc", "tv"}
 
@@ -387,11 +395,23 @@ def check_file(path, diag, allow_scripts):
     for sec, count in seen.items():
         if sec in SINGLETON_SECTIONS and count > 1:
             diag.error(name, "节 %s 出现 %d 次（应只出现一次）" % (sec, count))
-    # 默认禁止启用状态的脚本
-    if not allow_scripts:
-        for lineno, line in enumerate(lines, 1):
-            if SCRIPT_PATH_RE.search(line) and not line.lstrip().startswith("#"):
-                diag.error(name, "第 %d 行启用了第三方脚本 script-path（远程模块默认应注释掉脚本）" % lineno)
+    # 脚本检查：默认只允许白名单来源的远程脚本（且必须是 https）；
+    # 白名单外的一律报错，除非 --allow-scripts。
+    for lineno, line in enumerate(lines, 1):
+        s_line = line.strip()
+        if not s_line or s_line.startswith("#"):
+            continue
+        m = SCRIPT_PATH_URL_RE.search(s_line)
+        if not m:
+            if SCRIPT_PATH_RE.search(s_line):
+                diag.error(name, "第 %d 行 script-path 缺少合法 URL" % lineno)
+            continue
+        url = m.group(1)
+        if allow_scripts:
+            continue
+        if not url.startswith(TRUSTED_SCRIPT_PREFIXES):
+            diag.error(name, "第 %d 行启用了白名单外的第三方脚本（%s）；如确认可信请加 --allow-scripts 或同步本脚本白名单" % (lineno, url))
+        # 白名单来源视为已审查：不告警（如需严格审查可加 --allow-scripts 反向使用）
     # 同模块重复规则
     pair_seen = {}
     for r in domain_rules:

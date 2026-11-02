@@ -42,4 +42,6 @@ DOMAIN-SET,https://raw.githubusercontent.com/HyPerP/shadowrocket-rules/main/extr
   `.github/workflows/validate-modules.yml` 会在 push 时自动校验模块语法。
 - 需要 HTTPS 解密的只有 B 站第 3/4 层与番茄 HTTPS 改写层；红果/微博/B站第 1、2 层不需要。
 
-> 2026-11-02 更新：追加 APP 启动页/开屏广告规则（整合 deezertidal/shadowrocket-rules 的 startingad.module，242 条启用 URL 改写，约 188 个 App（12 条过宽/疑似误伤默认注释；[MITM] 保留被规则用到的 211 个新增域））；模块 [MITM] 增至 226 组域名，不开 HTTPS 解密时该部分不生效。
+> 2026-11-02 更新：追加 APP 启动页/开屏广告规则（整合 deezertidal/shadowrocket-rules 的 startingad.module，242 条启用 URL 改写，约 188 个 App（12 条过宽/疑似误伤默认注释；[MITM] 保留被规则用到的 211 个新增域））；模块 [MITM] 增至 227 组域名，不开 HTTPS 解密时该部分不生效。
+
+> 2026-11-02 追加 B站脚本层：[Script] 启用 app2smile/rules 的 bilibili-json.js（推荐页/开屏）与 bilibili-proto.js（视频页 View/DynAll），需 HTTPS 解密；MITM 随之增至 227 组。B站异常时注释对应脚本行即可回滚。
