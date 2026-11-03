@@ -1,9 +1,9 @@
 #!name=通用去广告（B站/番茄/红果/微博 + APP 启动页）
-#!desc=2026-11-02 通用版：B站、番茄、红果、微博 + APP 启动页开屏广告（约 188 个 App，整合 deezertidal startingad）。域名 + URL 改写 + 可选 MITM + B站脚本层（app2smile/rules，[Script] 默认启用，可注释回滚）；不含证书。B站第 3/4 层、B站脚本层（app.bilibili.com/grpc.biliapi.net）、番茄 HTTPS 改写层、第四部分「APP 启动页」规则需要开启 HTTPS 解密；红果、微博、B站第 1/2 层不需要。按远程模块 URL 安装后可自动更新。
+#!desc=2026-11-03 通用版：B站、番茄、红果、微博 + APP 启动页开屏广告（约 188 个 App，整合 deezertidal startingad）。域名 + URL 改写 + 可选 MITM + B站脚本层（app2smile/rules，[Script] 默认启用，可注释回滚）；不含证书。B站第 3/4 层、B站脚本层（app.bilibili.com/grpc.biliapi.net）、番茄 HTTPS 改写层、第四部分「APP 启动页」规则需要开启 HTTPS 解密；红果、微博、B站第 1/2 层不需要。按远程模块 URL 安装后可自动更新。
 #!author=本地整理（来源：blackmatrix7、deezertidal/bm7、BiliUniverse/ADBlock、SherryBX/XiaoQi、q85985477/shadowrocket-modules、qq2519157/adblock-modules（MIT © 2026 logan）、2026-10-29/30 真机日志）
 #!homepage=https://github.com/HyPerP/shadowrocket-rules
-#!version=1.3
-#!date=2026-11-02
+#!version=1.4
+#!date=2026-11-03
 
 # ============================================================
 # 通用去广告模块（单文件版）——结构、顺序与依赖
@@ -20,6 +20,9 @@
 #   已跳过 → 258 条改写；其中 3 条重复 + 1 条 lookbehind 丢弃 → 收录 254 条；1 条过宽规则
 #   （/videos/other/）默认注释；另有 11 条疑似误伤正常功能的规则默认注释 → 实际启用 242 条。
 #   注意：上游该仓库未提供 LICENSE，第四部分规则仅供个人自用；公开再分发前请自行确认授权。
+#   2026-11-03 追加番茄新广告通道规则：vas-lf-x.snssdk.com（TTVideoEngine 章末/底部视频广告，
+#   URL 带 encode_user_tag=ad_bvc2_v1）与 lf-reward-video.bytedcdn.com（激励视频素材），
+#   依据 honue/zqzess FanQieNovel.plugin 与 XiaoQi 同款规则。
 #   2026-11-02 追加 B站脚本层：[Script] 启用 app2smile/rules 的 bilibili-json.js（开屏/推荐页 JSON 过滤）
 #   与 bilibili-proto.js（视频页 View / 动态 DynAll 的 protobuf 广告字段）。脚本为第三方远程 JS，
 #   需要 HTTPS 解密；如 B站异常，注释 [Script] 里对应行即可回滚（域名/URL 规则仍有效）。
@@ -231,6 +234,13 @@ DOMAIN,is.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN,ib-lq.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN,mcs.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN,security-lq.snssdk.com,REJECT,extended-matching,pre-matching
+# 番茄章末/底部「视频广告」：TTVideoEngine 的 vas-lf-x 通道（2026-11-03 日志新增，URL 带 encode_user_tag=ad_bvc2_v1）
+# 依据：honue/zqzess FanQieNovel.plugin、SherryBX/XiaoQi 同款 DOMAIN,vas-lf-x.snssdk.com,REJECT；
+# 如番茄短剧/视频播放异常：注释下面 DOMAIN 行，改用下一行「只拦广告标签」的 URL-REGEX 版本。
+DOMAIN,vas-lf-x.snssdk.com,REJECT,extended-matching,pre-matching
+# URL-REGEX,^https?:\/\/vas-lf-x\.snssdk\.com\/video\/fplay\/.*[?&]encode_user_tag=ad_,REJECT
+# 激励视频素材 CDN（XiaoQi 规则；不影响正文/金币）
+DOMAIN,lf-reward-video.bytedcdn.com,REJECT,extended-matching,pre-matching
 DOMAIN,gurd.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN-SUFFIX,log.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN-SUFFIX,log-hl.snssdk.com,REJECT,extended-matching,pre-matching

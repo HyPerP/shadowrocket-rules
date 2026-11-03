@@ -45,3 +45,5 @@ DOMAIN-SET,https://raw.githubusercontent.com/HyPerP/shadowrocket-rules/main/extr
 > 2026-11-02 更新：追加 APP 启动页/开屏广告规则（整合 deezertidal/shadowrocket-rules 的 startingad.module，242 条启用 URL 改写，约 188 个 App（12 条过宽/疑似误伤默认注释；[MITM] 保留被规则用到的 211 个新增域））；模块 [MITM] 增至 227 组域名，不开 HTTPS 解密时该部分不生效。
 
 > 2026-11-02 追加 B站脚本层：[Script] 启用 app2smile/rules 的 bilibili-json.js（推荐页/开屏）与 bilibili-proto.js（视频页 View/DynAll），需 HTTPS 解密；MITM 随之增至 227 组。B站异常时注释对应脚本行即可回滚。
+
+> 2026-11-03 追加番茄章末/底部视频广告通道规则：DOMAIN,vas-lf-x.snssdk.com,REJECT（TTVideoEngine，URL 带 encode_user_tag=ad_bvc2_v1）+ lf-reward-video.bytedcdn.com。如番茄短剧/正常视频异常，可注释并改用模块内 URL-REGEX 备选。
