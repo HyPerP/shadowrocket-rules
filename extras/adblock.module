@@ -1,9 +1,9 @@
 #!name=通用去广告（B站/番茄/红果/微博 + APP 启动页）
-#!desc=2026-11-03 通用版：B站、番茄、红果、微博 + APP 启动页开屏广告（约 188 个 App，整合 deezertidal startingad）。域名 + URL 改写 + 可选 MITM + B站脚本层（app2smile/rules，[Script] 默认启用，可注释回滚）；不含证书。B站第 3/4 层、B站脚本层（app.bilibili.com/grpc.biliapi.net）、番茄 HTTPS 改写层、第四部分「APP 启动页」规则需要开启 HTTPS 解密；红果、微博、B站第 1/2 层不需要。按远程模块 URL 安装后可自动更新。
+#!desc=2026-11-04 通用版：B站、番茄、红果、微博 + APP 启动页开屏广告（约 188 个 App，整合 deezertidal startingad）。域名 + URL 改写 + 可选 MITM + B站脚本层（app2smile/rules，[Script] 默认启用，可注释回滚）；不含证书。B站第 3/4 层、B站脚本层（app.bilibili.com/grpc.biliapi.net）、番茄 HTTPS 改写层、第四部分「APP 启动页」规则需要开启 HTTPS 解密；红果、微博、B站第 1/2 层不需要。按远程模块 URL 安装后可自动更新。
 #!author=本地整理（来源：blackmatrix7、deezertidal/bm7、BiliUniverse/ADBlock、SherryBX/XiaoQi、q85985477/shadowrocket-modules、qq2519157/adblock-modules（MIT © 2026 logan）、2026-10-29/30 真机日志）
 #!homepage=https://github.com/HyPerP/shadowrocket-rules
-#!version=1.4
-#!date=2026-11-03
+#!version=1.5
+#!date=2026-11-04
 
 # ============================================================
 # 通用去广告模块（单文件版）——结构、顺序与依赖
@@ -20,6 +20,8 @@
 #   已跳过 → 258 条改写；其中 3 条重复 + 1 条 lookbehind 丢弃 → 收录 254 条；1 条过宽规则
 #   （/videos/other/）默认注释；另有 11 条疑似误伤正常功能的规则默认注释 → 实际启用 242 条。
 #   注意：上游该仓库未提供 LICENSE，第四部分规则仅供个人自用；公开再分发前请自行确认授权。
+#   2026-11-04 B站脚本 bili-json 的匹配范围从 x/v2/feed/index? 扩到 x/v2/feed/index 前缀，
+#   覆盖 feed/index/story、feed/index/relate/story、feed/index/space/story/cursor 等信息流广告。
 #   2026-11-03 追加番茄新广告通道规则：vas-lf-x.snssdk.com（TTVideoEngine 章末/底部视频广告，
 #   URL 带 encode_user_tag=ad_bvc2_v1）与 lf-reward-video.bytedcdn.com（激励视频素材），
 #   依据 honue/zqzess FanQieNovel.plugin 与 XiaoQi 同款规则。
@@ -1084,7 +1086,7 @@ hostname = %APPEND% *.pangolin-sdk-toutiao.com,*.pglstatp-toutiao.com,*.pstatp.c
 # 如 B站出现异常（白屏/动态/视频页报错）：先注释下面 bili-json / bili-proto 对应行。
 # ==========================================================================
 # bilibili-json.js：开屏 data.show 清空 + x/v2/feed/index 过滤 cm_v2/banner/游戏广告卡片
-bili-json = type=http-response, pattern=^https:\/\/app\.bilibili\.com\/x\/v2\/(splash\/(list|show)|feed\/index\?), requires-body=1, script-path=https://raw.githubusercontent.com/app2smile/rules/master/js/bilibili-json.js
+bili-json = type=http-response, pattern=^https:\/\/app\.bilibili\.com\/x\/v2\/(splash\/(list|show)|feed\/index), requires-body=1, script-path=https://raw.githubusercontent.com/app2smile/rules/master/js/bilibili-json.js
 # bilibili-proto.js：视频页 View / 动态 DynAll 的 protobuf 广告字段（高风险：若异常先注释本行）
 bili-proto = type=http-response, pattern=^https:\/\/(grpc\.biliapi\.net|app\.bilibili\.com)\/bilibili\.app\.(viewunite\.v1\.View\/View|dynamic\.v2\.Dynamic\/DynAll)$, requires-body=1, script-path=https://raw.githubusercontent.com/app2smile/rules/master/js/bilibili-proto.js
 
