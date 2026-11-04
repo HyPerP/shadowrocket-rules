@@ -1,8 +1,8 @@
 #!name=通用去广告（B站/番茄/红果/微博 + APP 启动页）
-#!desc=2026-11-04 通用版：B站、番茄、红果、微博 + APP 启动页开屏广告（约 188 个 App，整合 deezertidal startingad）。域名 + URL 改写 + 可选 MITM + B站脚本层（app2smile/rules，[Script] 默认启用，可注释回滚）；不含证书。B站第 3/4 层、B站脚本层（app.bilibili.com/grpc.biliapi.net）、番茄 HTTPS 改写层、第四部分「APP 启动页」规则需要开启 HTTPS 解密；红果、微博、B站第 1/2 层不需要。按远程模块 URL 安装后可自动更新。
-#!author=本地整理（来源：blackmatrix7、deezertidal/bm7、BiliUniverse/ADBlock、SherryBX/XiaoQi、q85985477/shadowrocket-modules、qq2519157/adblock-modules（MIT © 2026 logan）、2026-10-29/30 真机日志）
+#!desc=2026-11-04 通用版：B站、番茄、红果、微博 + APP 启动页开屏广告（约 188 个 App，整合 deezertidal startingad）。域名 + URL 改写 + 可选 MITM + B站脚本层（app2smile）+ 番茄信息流脚本层（fanqie-loon，[Script] 默认启用，可注释回滚）；不含证书。B站第 3/4 层、B站脚本层（app.bilibili.com/grpc.biliapi.net）、番茄脚本层（*.fqnovel.com/*.snssdk.com/imapi-oth.zijieapi.com）、番茄 HTTPS 改写层、第四部分「APP 启动页」规则需要开启 HTTPS 解密；红果、微博、B站第 1/2 层不需要。按远程模块 URL 安装后可自动更新。
+#!author=本地整理（来源：blackmatrix7、deezertidal/bm7、BiliUniverse/ADBlock、SherryBX/XiaoQi、q85985477/shadowrocket-modules、qq2519157/adblock-modules（MIT © 2026 logan）、2026-10-29/30 真机日志；taiji951906413/fanqie-loon 番茄过滤脚本）
 #!homepage=https://github.com/HyPerP/shadowrocket-rules
-#!version=1.11
+#!version=1.12
 #!date=2026-11-04
 
 # ============================================================
@@ -20,16 +20,15 @@
 #   已跳过 → 258 条改写；其中 3 条重复 + 1 条 lookbehind 丢弃 → 收录 254 条；1 条过宽规则
 #   （/videos/other/）默认注释；另有 11 条疑似误伤正常功能的规则默认注释 → 实际启用 242 条。
 #   注意：上游该仓库未提供 LICENSE，第四部分规则仅供个人自用；公开再分发前请自行确认授权。
-#   2026-11-04 v1.11 兼容性回滚：注释 R1 IP pull-flv 规则（误伤抖音直播）、注释 p*-developer*.bytemaimg
-#   （抖音 216 次图片请求被拒）、移除 7 个临时诊断 MITM；番茄阅读广告的 reading.snssdk/qznovelvod 规则保留。
-#   2026-11-04 番茄阅读器内部广告补漏（依据 XiaoQi-sgmodule 同款规则）：reading.snssdk.com、
-#   reading-hl.snssdk.com/api/ad、ad.qznovelvod.com、v95-...-reading-video.qznovelvod.com。
-#   2026-11-04 B站开屏策略调整：splash/show、list 不再 reject-dict，改为放行 + bili-json 脚本删除 data.show，
-#   避免“reject→App 缓存旧广告素材→之后规则失效”的循环（依据 blackmatrix7 startup 文档）；brand/event 仍拒绝。
-#   2026-11-04 诊断用 MITM 扩容（临时）：*.douyinpic.com（覆盖 p*-sign/p26/webcast-sign）、*.fqnovelpic.com、i0/i1/i2.hdslb.com、
-#   *.ecombdimg.com、hilo.bilibili.com；
-#   只解密图片域，用于定位「B站开屏图片」与「番茄阅读页广告图片」的真实 URL 路径；定位后改精确 URL-REGEX 再缩减。
-#   2026-11-04 B站脚本 bili-json 的匹配范围从 x/v2/feed/index? 扩到 x/v2/feed/index 前缀，
+#   2026-11-04 v1.12 番茄阅读广告最终方案：移植 Loon 插件 fanqie-loon（作者 taiji951906413）的
+#   http-response 脚本 fanqie-feed，过滤番茄 feed JSON 里的广告条目；reading.snssdk 不再 REJECT
+#   （否则 H5 白屏），vas-lf-x 只拦 encode_user_tag=ad_；tagtic/log/gurd 默认放开以兼容抖音。
+#   上游 fanqie-loon 仓库无显式 LICENSE；本次仅远程引用其 JS、未复制代码，公开再分发前请自行确认授权。
+#   2026-11-04 v1.11 兼容性回滚：R1 IP pull-flv（误伤抖音直播）、p*-developer*.bytemaimg（抖音图片）
+#   与 7 个临时诊断 MITM 已移除。
+#   2026-11-04 B站开屏策略调整：splash/show、list 放行 + bili-json 脚本清 data.show；brand/event 仍拒绝。
+#   2026-11-04 v1.10 曾加 XiaoQi 番茄域名规则（reading.snssdk/qznovelvod）；v1.12 已改为脚本过滤，相关 REJECT 注释。
+#   2026-11-04 B站脚本 bili-json 匹配范围从 x/v2/feed/index? 扩到 x/v2/feed/index 前缀，
 #   覆盖 feed/index/story、feed/index/relate/story、feed/index/space/story/cursor 等信息流广告。
 #   2026-11-03 追加番茄新广告通道规则：vas-lf-x.snssdk.com（TTVideoEngine 章末/底部视频广告，
 #   URL 带 encode_user_tag=ad_bvc2_v1）与 lf-reward-video.bytedcdn.com（激励视频素材），
@@ -250,21 +249,21 @@ DOMAIN,is.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN,ib-lq.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN,mcs.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN,security-lq.snssdk.com,REJECT,extended-matching,pre-matching
-# 番茄阅读器内部广告（XiaoQi-sgmodule 同款，2026-11-04 调研）：阅读页 API / 广告签名图由 F1 通配接管。
-DOMAIN,reading.snssdk.com,REJECT,extended-matching,pre-matching
-URL-REGEX,^https?:\/\/reading-hl\.snssdk\.com\/api\/ad\/,REJECT
-# 巨量引擎广告监测（2026-11-04 日志：log3.tagtic.cn 直连、g1.tagtic.cn 被域名名单拦）
-DOMAIN-SUFFIX,tagtic.cn,REJECT,extended-matching,pre-matching
-# 番茄章末/底部「视频广告」：TTVideoEngine 的 vas-lf-x 通道（2026-11-03 日志新增，URL 带 encode_user_tag=ad_bvc2_v1）
-# 依据：honue/zqzess FanQieNovel.plugin、SherryBX/XiaoQi 同款 DOMAIN,vas-lf-x.snssdk.com,REJECT；
-# 如番茄短剧/视频播放异常：注释下面 DOMAIN 行，改用下一行「只拦广告标签」的 URL-REGEX 版本。
-DOMAIN,vas-lf-x.snssdk.com,REJECT,extended-matching,pre-matching
-# URL-REGEX,^https?:\/\/vas-lf-x\.snssdk\.com\/video\/fplay\/.*[?&]encode_user_tag=ad_,REJECT
+# 番茄阅读器内部广告（2026-11-04 最终方案）：改用 Loon 插件 fanqie-loon 的 http-response 脚本过滤
+# （见 [Script] fanqie-feed，作者 taiji951906413）。注意：reading.snssdk.com 是 H5/接口，不能再 REJECT
+# （Loon 插件 README 明确列为「绝对不要拦」，否则页面白屏），原 XiaoQi 的 REJECT/URL-REGEX 已注释。
+# 番茄章末/底部视频广告：只拦带 encode_user_tag=ad_ 的 vas-lf-x 视频（抖音正常视频不带该标签，避免整域误伤）。
+# URL-REGEX,^https?:\/\/reading-hl\.snssdk\.com\/api\/ad\/,REJECT   # 已弃用：改由 fanqie-feed 脚本过滤
+URL-REGEX,^https?:\/\/vas-lf-x\.snssdk\.com\/video\/fplay\/.*[?&]encode_user_tag=ad_,REJECT
+# 巨量引擎广告监测（tagtic）：2026-11-04 起默认注释，避免影响抖音广告 SDK 正常初始化；需要时取消注释
+# DOMAIN-SUFFIX,tagtic.cn,REJECT,extended-matching,pre-matching
 # 激励视频素材 CDN（XiaoQi 规则；不影响正文/金币）
 DOMAIN,lf-reward-video.bytedcdn.com,REJECT,extended-matching,pre-matching
-DOMAIN,gurd.snssdk.com,REJECT,extended-matching,pre-matching
-DOMAIN-SUFFIX,log.snssdk.com,REJECT,extended-matching,pre-matching
-DOMAIN-SUFFIX,log-hl.snssdk.com,REJECT,extended-matching,pre-matching
+# 按 fanqie-loon README 的档位 C 建议：log 是 AppLog 主通道、gurd 是设备注册，默认注释避免风控/白屏。
+# 需要极致拦埋点时再取消注释：
+# DOMAIN,gurd.snssdk.com,REJECT,extended-matching,pre-matching
+# DOMAIN-SUFFIX,log.snssdk.com,REJECT,extended-matching,pre-matching
+# DOMAIN-SUFFIX,log-hl.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN-SUFFIX,mon.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN-SUFFIX,ib.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN,mon.toutiaocloud.net,REJECT,extended-matching,pre-matching
@@ -1086,7 +1085,7 @@ https?:\/\/m\.sd\.10086\.cn\/zapi\/app_common\/homeWelcome\/welcome.do - reject
 
 [MITM]
 # %APPEND% = 追加到主配置解密名单（不覆盖配置/其它模块里的 hostname）。
-# 共 227 组：前三部分 15 + 第四部分 211 + B站脚本层 1；2026-11-04 18:28 起移除 7 个诊断域
+# 共 228 组：前三部分 15 + 第四部分 211 + B站脚本层 1 + 番茄脚本 imapi-oth 1；2026-11-04 18:28 起移除 7 个诊断域
 #（抖音图片/直播异常，且通配 MITM 未成功解密出番茄广告图路径，先恢复最小解密面）。
 # 上游 startingad 的 239 个域里，只保留被启用规则实际用到的；省略 24 个仅脚本/未用域名
 # （如 testflight.apple.com、security.wechat.com、api.weibo.cn、kuwo/rr.tv 等，减少解密面）。
@@ -1096,9 +1095,9 @@ https?:\/\/m\.sd\.10086\.cn\/zapi\/app_common\/homeWelcome\/welcome.do - reject
 # 若未来 HTTPS 素材来自 mirrorcos 等未列域，需自行把对应域补进 hostname。
 # 第四部分新增域名来自 deezertidal/startingad.module 的 [MITM]（补了上游漏掉的 capi.mwee.cn）。
 # 开启解密前建议先读文件头的风险说明；只需红果/微博去广告的用户不要开解密。
-# ⚠️ 2026-11-02 起为「第四部分 APP 启动页」新增 211 个解密域，加 B站脚本层 grpc.biliapi.net 后总量 227，
+# ⚠️ 2026-11-02 起为「第四部分 APP 启动页」新增 211 个解密域，加 B站脚本层 grpc.biliapi.net 与番茄脚本 imapi-oth.zijieapi.com 后总量 228，
 #    解密面显著变大；不想要多 App 开屏去广告时，把第四部分整段注释并删掉这些额外域名。
-hostname = %APPEND% *.pangolin-sdk-toutiao.com,*.pglstatp-toutiao.com,*.pstatp.com,*.byteimg.com,*.snssdk.com,adim.pinduoduo.com,*-novelapp.ixigua.com,fqnovel.com,*.fqnovel.com,app.bilibili.com,api.bilibili.com,api.vc.bilibili.com,manga.bilibili.com,upos-sz-static.bilivideo.com,upos-sz-staticcos.bilivideo.com,mlol.qt.qq.com,app-gw.csdn.net,api.gameplus.qq.com,mrobot.pconline.com.cn,djcapp.game.qq.com,mxsa.mxbc.net,cn-acs.m.cainiao.com,zjdr666.com,api.caiyunapp.com,api.ahmobile.cn,gx.10086.cn,emdcadvertise.eastmoney.com,acs.m.taobao.com,router-app-api.jdcloud.com,api-sams.walmartmobile.cn,creditcardapp.bankcomm.cn,webappcfg.paas.cmbchina.com,m.creditcard.ecitic.com,lban.spdb.com.cn,adapi.izuiyou.com,i.ys7.com,apps.api.ke.com,api.yonghuivip.com,access.mypikpak.com,gateway.shouqiev.com,res.pizzahut.com.cn,api.caijingmobile.com,3g.csair.com,client-api.oray.com,bgw.xinyue.qq.com,api-new.app.acfun.cn,m.client.10010.com,open.fitdays.cn,gd.10086.cn,gha.ghac.cn,ap.dongqiudi.com,sh-gateway.shihuo.cn,103.91.210.141,adx-cn.anythinktech.com,api.dangdang.com,pipi.4kya.com,vip7.fzwdyy.cn,sdk.alibaba.com.ailbaba.me,pan.baidu.com,yunbusiness.ccb.com,client.app.coc.10086.cn,t1.market.xiaomi.com,api.m.mi.com,app.zhuanzhuan.com,api.cloud.189.cn,appwk.baidu.com,us.l.qq.com,open.e.kuaishou.com,mi.gdt.qq.com,a.qiumibao.com,api.tipsoon.com,b.appsimg.com,ios.sspai.com,zconfig.alibabausercontent.com,g.alicdn.com,api.touker.com,mpcs.suning.com,api.pinduoduo.com,api.yangkeduo.com,easyreadfs.nosdn.127.net,sp.kaola.com,gw.kaola.com,mime.baidu.com,learn.chaoxing.com,mapi.dangdang.com,client.qunar.com,mpos-pic.helipay.com,dili.bdatu.com,wap.ngchina.cn,ih2.ireader.com,adpai.thepaper.cn,api.haohaozhu.cn,list-app-m.i4.cn,api.xiachufang.com,jdread-api.jd.com,peisongapi.meituan.com,*gaoqingdianshi.com,*.kakamobi.cn,api.jxedt.com,slapi.oray.net,r.inews.qq.com,app.yinxiang.com,mapi.appvipshop.com,syh.zybang.com,cdn.cmgadx.com,api.internetofcity.cn,img.meituan.net,venus.yhd.com,mage*.if.qidian.com,god.gameyw.netease.com,m.ibuscloud.com,e.dangdang.com,app2.autoimg.cn,adproxy.autohome.com.cn,discardrp.umetrip.com,startup.umetrip.com,bp-api.bestv.com.cn,explorer.tratao.com,overseas.weico.cc,open3.vistastory.com,ssp.dzh.com.cn,api-access.pangolin-sdk-toutiao.com,maicai.api.ddxq.mobi,www.meituan.com,client.mail.163.com,api.izuiyou.com,appapi.huazhu.com,api.wfdata.club,api.psy-1.com,res.kfc.com.cn,mp.weixin.qq.com,cdn.*.chelaileapp.cn,api.coolapk.com,edith.xiaohongshu.com,app3.qdaily.com,daoyu.sdo.com,img.jiemian.com,ccsp-egmas.sf-express.com,*.laichon.com,api.yikaobang.com.cn,api-ad-product.huxiu.com,jad-api.jin10.com,mob.mddcloud.com.cn,appactive.1234567.com.cn,rtbapi.douyucdn.cn,service.busi.inke.cn,gab.122.gov.cn,dispatcher.camera360.com,app.api.versa-ai.com,open.taou.com,api.taou.com,track.mm.taou.com,app.dewu.com,data-collector.soulapp.cn,api.vistopia.com.cn,pss.txffp.com,m.sd.10086.cn,gw.alicdn.com,helper.2bulu.com,47.100.65.202,wap.js.10086.cn,tagit.hyhuo.com,top-widgets-api.xiaozujian.com,tel.mangaapi.manhuaren.com,apis.lifeweek.com.cn,support.you.163.com,yanxuan.nosdn.127.net,*.peopleapp.com,new-app-api.ylyk.com,gw.aihuishou.com,*.58cdn.com.cn,app.58.com,static.zhihu.com,creditcardapp.bankcomm.com,res.xiaojukeji.com,lchttpapi.xczim.com,business.msstatic.com,mangaapi.manhuaren.com,api.kkmh.com,*.chelaile.net.cn,guanyu.longfor.com,pages.xiaohongshu.com,www.xiaohongshu.com,elemecdn.com,fuss10.elemecdn.com,www1.elecfans.com,m.tuniu.com,mapi.mafengwo.cn,api.xiaoyi.com,api.douban.com,otheve.beacon.qq.com,mapi.sfbest.com,sso.ifanr.com,s3plus.meituan.net,flowplus.meituan.net,p*.meituan.net,ms.jr.jd.com,wmapi.meituan.com,appconf.mail.163.com,dl-cu-hz.lechange.cn,bdsp-x.jd.com,dsp-x.jd.com,api.m.jd.com,fbchina.flipchina.cn,zone.guiderank-app.com,homefront.qunar.com,*.bdstatic.com,j-image.missfresh.cn,ma-adx.ctrip.com,m.ctrip.com,mbd.baidu.com,capis.didapinche.com,capis*.didapinche.com,goblin.hupu.com,capi.mwee.cn,iface2.iqiyi.com,cdn.dianshihome.com,api4.bybutter.com,shopic.sf-express.com,referee.xiaohongshu.com,js-ad.ayximgs.com.ad-universe-cdn.hzhcbkj.cn,games.mobileapi.hupu.com,i1.hoopchina.com.cn,adm.10jqka.com.cn,wcprd.hilton.com.cn,pzoap.moedot.net,grpc.biliapi.net
+hostname = %APPEND% *.pangolin-sdk-toutiao.com,*.pglstatp-toutiao.com,*.pstatp.com,*.byteimg.com,*.snssdk.com,adim.pinduoduo.com,*-novelapp.ixigua.com,fqnovel.com,*.fqnovel.com,app.bilibili.com,api.bilibili.com,api.vc.bilibili.com,manga.bilibili.com,upos-sz-static.bilivideo.com,upos-sz-staticcos.bilivideo.com,mlol.qt.qq.com,app-gw.csdn.net,api.gameplus.qq.com,mrobot.pconline.com.cn,djcapp.game.qq.com,mxsa.mxbc.net,cn-acs.m.cainiao.com,zjdr666.com,api.caiyunapp.com,api.ahmobile.cn,gx.10086.cn,emdcadvertise.eastmoney.com,acs.m.taobao.com,router-app-api.jdcloud.com,api-sams.walmartmobile.cn,creditcardapp.bankcomm.cn,webappcfg.paas.cmbchina.com,m.creditcard.ecitic.com,lban.spdb.com.cn,adapi.izuiyou.com,i.ys7.com,apps.api.ke.com,api.yonghuivip.com,access.mypikpak.com,gateway.shouqiev.com,res.pizzahut.com.cn,api.caijingmobile.com,3g.csair.com,client-api.oray.com,bgw.xinyue.qq.com,api-new.app.acfun.cn,m.client.10010.com,open.fitdays.cn,gd.10086.cn,gha.ghac.cn,ap.dongqiudi.com,sh-gateway.shihuo.cn,103.91.210.141,adx-cn.anythinktech.com,api.dangdang.com,pipi.4kya.com,vip7.fzwdyy.cn,sdk.alibaba.com.ailbaba.me,pan.baidu.com,yunbusiness.ccb.com,client.app.coc.10086.cn,t1.market.xiaomi.com,api.m.mi.com,app.zhuanzhuan.com,api.cloud.189.cn,appwk.baidu.com,us.l.qq.com,open.e.kuaishou.com,mi.gdt.qq.com,a.qiumibao.com,api.tipsoon.com,b.appsimg.com,ios.sspai.com,zconfig.alibabausercontent.com,g.alicdn.com,api.touker.com,mpcs.suning.com,api.pinduoduo.com,api.yangkeduo.com,easyreadfs.nosdn.127.net,sp.kaola.com,gw.kaola.com,mime.baidu.com,learn.chaoxing.com,mapi.dangdang.com,client.qunar.com,mpos-pic.helipay.com,dili.bdatu.com,wap.ngchina.cn,ih2.ireader.com,adpai.thepaper.cn,api.haohaozhu.cn,list-app-m.i4.cn,api.xiachufang.com,jdread-api.jd.com,peisongapi.meituan.com,*gaoqingdianshi.com,*.kakamobi.cn,api.jxedt.com,slapi.oray.net,r.inews.qq.com,app.yinxiang.com,mapi.appvipshop.com,syh.zybang.com,cdn.cmgadx.com,api.internetofcity.cn,img.meituan.net,venus.yhd.com,mage*.if.qidian.com,god.gameyw.netease.com,m.ibuscloud.com,e.dangdang.com,app2.autoimg.cn,adproxy.autohome.com.cn,discardrp.umetrip.com,startup.umetrip.com,bp-api.bestv.com.cn,explorer.tratao.com,overseas.weico.cc,open3.vistastory.com,ssp.dzh.com.cn,api-access.pangolin-sdk-toutiao.com,maicai.api.ddxq.mobi,www.meituan.com,client.mail.163.com,api.izuiyou.com,appapi.huazhu.com,api.wfdata.club,api.psy-1.com,res.kfc.com.cn,mp.weixin.qq.com,cdn.*.chelaileapp.cn,api.coolapk.com,edith.xiaohongshu.com,app3.qdaily.com,daoyu.sdo.com,img.jiemian.com,ccsp-egmas.sf-express.com,*.laichon.com,api.yikaobang.com.cn,api-ad-product.huxiu.com,jad-api.jin10.com,mob.mddcloud.com.cn,appactive.1234567.com.cn,rtbapi.douyucdn.cn,service.busi.inke.cn,gab.122.gov.cn,dispatcher.camera360.com,app.api.versa-ai.com,open.taou.com,api.taou.com,track.mm.taou.com,app.dewu.com,data-collector.soulapp.cn,api.vistopia.com.cn,pss.txffp.com,m.sd.10086.cn,gw.alicdn.com,helper.2bulu.com,47.100.65.202,wap.js.10086.cn,tagit.hyhuo.com,top-widgets-api.xiaozujian.com,tel.mangaapi.manhuaren.com,apis.lifeweek.com.cn,support.you.163.com,yanxuan.nosdn.127.net,*.peopleapp.com,new-app-api.ylyk.com,gw.aihuishou.com,*.58cdn.com.cn,app.58.com,static.zhihu.com,creditcardapp.bankcomm.com,res.xiaojukeji.com,lchttpapi.xczim.com,business.msstatic.com,mangaapi.manhuaren.com,api.kkmh.com,*.chelaile.net.cn,guanyu.longfor.com,pages.xiaohongshu.com,www.xiaohongshu.com,elemecdn.com,fuss10.elemecdn.com,www1.elecfans.com,m.tuniu.com,mapi.mafengwo.cn,api.xiaoyi.com,api.douban.com,otheve.beacon.qq.com,mapi.sfbest.com,sso.ifanr.com,s3plus.meituan.net,flowplus.meituan.net,p*.meituan.net,ms.jr.jd.com,wmapi.meituan.com,appconf.mail.163.com,dl-cu-hz.lechange.cn,bdsp-x.jd.com,dsp-x.jd.com,api.m.jd.com,fbchina.flipchina.cn,zone.guiderank-app.com,homefront.qunar.com,*.bdstatic.com,j-image.missfresh.cn,ma-adx.ctrip.com,m.ctrip.com,mbd.baidu.com,capis.didapinche.com,capis*.didapinche.com,goblin.hupu.com,capi.mwee.cn,iface2.iqiyi.com,cdn.dianshihome.com,api4.bybutter.com,shopic.sf-express.com,referee.xiaohongshu.com,js-ad.ayximgs.com.ad-universe-cdn.hzhcbkj.cn,games.mobileapi.hupu.com,i1.hoopchina.com.cn,adm.10jqka.com.cn,wcprd.hilton.com.cn,pzoap.moedot.net,grpc.biliapi.net,imapi-oth.zijieapi.com
 
 [Script]
 # ==========================================================================
@@ -1108,6 +1107,14 @@ hostname = %APPEND% *.pangolin-sdk-toutiao.com,*.pglstatp-toutiao.com,*.pstatp.c
 # ==========================================================================
 # bilibili-json.js：开屏 data.show 清空（splash/show、list 已放行，由本脚本接管）+ x/v2/feed/index 过滤广告卡片
 bili-json = type=http-response, pattern=^https:\/\/app\.bilibili\.com\/x\/v2\/(splash\/(list|show)|feed\/index), requires-body=1, script-path=https://raw.githubusercontent.com/app2smile/rules/master/js/bilibili-json.js
+# 番茄信息流广告过滤（移植自 Loon 插件 fanqie-loon，作者 taiji951906413；Shadowrocket 兼容脚本）
+# 作用：遍历响应 JSON，删除带 is_ad/ad_info/cell_type=ad 等广告标记的条目；同时按新结构打日志。
+# 需要 HTTPS 解密；只匹配番茄 API / reading.snssdk / imapi-oth，不影响抖音。
+# 脚本默认 filter 模式；如要临时关闭：Shadowrocket 若支持 argument，在 script-path 后加 , argument="MODE=off"；
+# 不支持 argument 时，直接注释下面整行 fanqie-feed 即可回滚（feed 广告会回来，域名规则仍有效）。
+fanqie-feed = type=http-response, pattern=^https?:\/\/(?:api\d*-normal-[a-z0-9]+\.fqnovel\.com|api\.fqnovel\.com|reading\.snssdk\.com|imapi-oth\.zijieapi\.com)\/, requires-body=1, script-path=https://raw.githubusercontent.com/taiji951906413/fanqie-loon/main/fanqie_ad_filter.js
+# 备用地址（raw 被墙时替换 script-path）：
+# https://cdn.jsdelivr.net/gh/taiji951906413/fanqie-loon@main/fanqie_ad_filter.js
 # bilibili-proto.js：视频页 View / 动态 DynAll 的 protobuf 广告字段（高风险：若异常先注释本行）
 bili-proto = type=http-response, pattern=^https:\/\/(grpc\.biliapi\.net|app\.bilibili\.com)\/bilibili\.app\.(viewunite\.v1\.View\/View|dynamic\.v2\.Dynamic\/DynAll)$, requires-body=1, script-path=https://raw.githubusercontent.com/app2smile/rules/master/js/bilibili-proto.js
 

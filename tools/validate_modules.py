@@ -26,7 +26,7 @@ validate_modules.py — 校验 extras/*.module（Shadowrocket 模块）语法与
 5. [URL Rewrite] 行：`pattern - reject|reject-dict|...` 或 `pattern target 302|307`，
    正则必须能编译；
 6. [MITM]：模块内 hostname 必须带 `%APPEND%`；禁止 ca-p12/ca-passphrase 等证书私钥字段；
-7. 脚本：`script-path` 只允许白名单来源（当前 app2smile/rules）且必须 https；
+7. 脚本：`script-path` 只允许白名单来源（当前 app2smile/rules、taiji951906413/fanqie-loon）且必须 https；
    白名单外默认报错，可用 `--allow-scripts` 放行全部（谨慎）；
 8. 跨模块冲突：同一域名在不同模块里一个 DIRECT 一个 REJECT（或 DOMAIN 落在
    对向策略的 DOMAIN-SUFFIX 之下）→ 报错；同模块内重复规则、多模块重复 URL 改写 → 提示。
@@ -126,6 +126,8 @@ SCRIPT_PATH_URL_RE = re.compile(r"script-path\s*=\s*(https?://[^,\s]+)")
 TRUSTED_SCRIPT_PREFIXES = (
     "https://raw.githubusercontent.com/app2smile/rules/",
     "https://github.com/app2smile/rules/",
+    "https://raw.githubusercontent.com/taiji951906413/fanqie-loon/",
+    "https://cdn.jsdelivr.net/gh/taiji951906413/fanqie-loon/",
 )
 
 CA_KEYS = ("ca-p12", "ca-passphrase", "ca-cert")
