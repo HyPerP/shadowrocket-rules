@@ -47,3 +47,11 @@ DOMAIN-SET,https://raw.githubusercontent.com/HyPerP/shadowrocket-rules/main/extr
 > 2026-11-02 追加 B站脚本层：[Script] 启用 app2smile/rules 的 bilibili-json.js（推荐页/开屏）与 bilibili-proto.js（视频页 View/DynAll），需 HTTPS 解密；MITM 随之增至 227 组。B站异常时注释对应脚本行即可回滚。
 
 > 2026-11-03 追加番茄章末/底部视频广告通道规则：DOMAIN,vas-lf-x.snssdk.com,REJECT（TTVideoEngine，URL 带 encode_user_tag=ad_bvc2_v1）+ lf-reward-video.bytedcdn.com。如番茄短剧/正常视频异常，可注释并改用模块内 URL-REGEX 备选。
+
+## 主配置远端副本（2026-11-04）
+
+- `extras/shadowrocket_merged.conf`：主配置的远端副本，`[General]` 带 `update-url`。
+- Shadowrocket「配置 → ➕ → 从 URL 下载」：
+  `https://cdn.jsdelivr.net/gh/HyPerP/shadowrocket-rules@main/extras/shadowrocket_merged.conf`
+- 添加后到「设置 → 自动更新 → 配置」打开自动后台更新（间隔 1 天）；会自动覆盖手机上的本地修改。
+- raw 备用：`https://raw.githubusercontent.com/HyPerP/shadowrocket-rules/main/extras/shadowrocket_merged.conf`
