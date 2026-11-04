@@ -2,7 +2,7 @@
 #!desc=2026-11-04 通用版：B站、番茄、红果、微博 + APP 启动页开屏广告（约 188 个 App，整合 deezertidal startingad）。域名 + URL 改写 + 可选 MITM + B站脚本层（app2smile/rules，[Script] 默认启用，可注释回滚）；不含证书。B站第 3/4 层、B站脚本层（app.bilibili.com/grpc.biliapi.net）、番茄 HTTPS 改写层、第四部分「APP 启动页」规则需要开启 HTTPS 解密；红果、微博、B站第 1/2 层不需要。按远程模块 URL 安装后可自动更新。
 #!author=本地整理（来源：blackmatrix7、deezertidal/bm7、BiliUniverse/ADBlock、SherryBX/XiaoQi、q85985477/shadowrocket-modules、qq2519157/adblock-modules（MIT © 2026 logan）、2026-10-29/30 真机日志）
 #!homepage=https://github.com/HyPerP/shadowrocket-rules
-#!version=1.9
+#!version=1.10
 #!date=2026-11-04
 
 # ============================================================
@@ -20,6 +20,8 @@
 #   已跳过 → 258 条改写；其中 3 条重复 + 1 条 lookbehind 丢弃 → 收录 254 条；1 条过宽规则
 #   （/videos/other/）默认注释；另有 11 条疑似误伤正常功能的规则默认注释 → 实际启用 242 条。
 #   注意：上游该仓库未提供 LICENSE，第四部分规则仅供个人自用；公开再分发前请自行确认授权。
+#   2026-11-04 番茄阅读器内部广告补漏（依据 XiaoQi-sgmodule 同款规则）：reading.snssdk.com、
+#   reading-hl.snssdk.com/api/ad、ad.qznovelvod.com、v95-...-reading-video.qznovelvod.com。
 #   2026-11-04 B站开屏策略调整：splash/show、list 不再 reject-dict，改为放行 + bili-json 脚本删除 data.show，
 #   避免“reject→App 缓存旧广告素材→之后规则失效”的循环（依据 blackmatrix7 startup 文档）；brand/event 仍拒绝。
 #   2026-11-04 诊断用 MITM 扩容（临时）：*.douyinpic.com（覆盖 p*-sign/p26/webcast-sign）、*.fqnovelpic.com、i0/i1/i2.hdslb.com、
@@ -94,6 +96,9 @@ DOMAIN-WILDCARD,v*-reading-ad.qznovelvod.com,REJECT,extended-matching,pre-matchi
 DOMAIN-WILDCARD,v*-bd-daily-reading-ad.qznovelvod.com,REJECT,extended-matching,pre-matching
 DOMAIN-WILDCARD,v*-se-daily-reading-ad.qznovelvod.com,REJECT,extended-matching,pre-matching
 DOMAIN-WILDCARD,v*-se-sjy-daily-reading-ad.qznovelvod.com,REJECT,extended-matching,pre-matching
+# 2026-11-04 补：番茄/阅读器内部广告视频子域（XiaoQi 同款）；必须排在 A3 的 qznovelvod DIRECT 之前。
+DOMAIN-SUFFIX,ad.qznovelvod.com,REJECT,extended-matching,pre-matching
+DOMAIN,v95-zjbwz-alismart-reading-video.qznovelvod.com,REJECT,extended-matching,pre-matching
 
 # A2. 番茄广告视频子域（原 fanqie 模块 D 段；2026-10-29 真机日志里 v9/v26/v11-novelapp.fqnovelvod.com
 #     被 REJECT 2262 次 = 广告视频确实被拦到）。必须排在 A3 的 fqnovelvod 整域 DIRECT 之前。
@@ -242,6 +247,9 @@ DOMAIN,is.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN,ib-lq.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN,mcs.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN,security-lq.snssdk.com,REJECT,extended-matching,pre-matching
+# 番茄阅读器内部广告（XiaoQi-sgmodule 同款，2026-11-04 调研）：阅读页 API / 广告签名图由 F1 通配接管。
+DOMAIN,reading.snssdk.com,REJECT,extended-matching,pre-matching
+URL-REGEX,^https?:\/\/reading-hl\.snssdk\.com\/api\/ad\/,REJECT
 # 巨量引擎广告监测（2026-11-04 日志：log3.tagtic.cn 直连、g1.tagtic.cn 被域名名单拦）
 DOMAIN-SUFFIX,tagtic.cn,REJECT,extended-matching,pre-matching
 # 番茄章末/底部「视频广告」：TTVideoEngine 的 vas-lf-x 通道（2026-11-03 日志新增，URL 带 encode_user_tag=ad_bvc2_v1）
