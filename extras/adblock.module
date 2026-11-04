@@ -2,7 +2,7 @@
 #!desc=2026-11-04 通用版：B站、番茄、红果、微博 + APP 启动页开屏广告（约 188 个 App，整合 deezertidal startingad）。域名 + URL 改写 + 可选 MITM + B站脚本层（app2smile）+ 番茄信息流脚本层（fanqie-loon，[Script] 默认启用，可注释回滚）；不含证书。B站第 3/4 层、B站脚本层（app.bilibili.com/grpc.biliapi.net）、番茄脚本层（*.fqnovel.com/*.snssdk.com/imapi-oth.zijieapi.com）、番茄 HTTPS 改写层、第四部分「APP 启动页」规则需要开启 HTTPS 解密；红果、微博、B站第 1/2 层不需要。按远程模块 URL 安装后可自动更新。
 #!author=本地整理（来源：blackmatrix7、deezertidal/bm7、BiliUniverse/ADBlock、SherryBX/XiaoQi、q85985477/shadowrocket-modules、qq2519157/adblock-modules（MIT © 2026 logan）、2026-10-29/30 真机日志；taiji951906413/fanqie-loon 番茄过滤脚本）
 #!homepage=https://github.com/HyPerP/shadowrocket-rules
-#!version=1.12
+#!version=1.13
 #!date=2026-11-04
 
 # ============================================================
@@ -20,6 +20,7 @@
 #   已跳过 → 258 条改写；其中 3 条重复 + 1 条 lookbehind 丢弃 → 收录 254 条；1 条过宽规则
 #   （/videos/other/）默认注释；另有 11 条疑似误伤正常功能的规则默认注释 → 实际启用 242 条。
 #   注意：上游该仓库未提供 LICENSE，第四部分规则仅供个人自用；公开再分发前请自行确认授权。
+#   2026-11-04 v1.13 补 fanqie-loon 档位 B 两条安全监控域（apm/toblog.snssdk.com），不涉及抖音。
 #   2026-11-04 v1.12 番茄阅读广告最终方案：移植 Loon 插件 fanqie-loon（作者 taiji951906413）的
 #   http-response 脚本 fanqie-feed，过滤番茄 feed JSON 里的广告条目；reading.snssdk 不再 REJECT
 #   （否则 H5 白屏），vas-lf-x 只拦 encode_user_tag=ad_；tagtic/log/gurd 默认放开以兼容抖音。
@@ -265,6 +266,9 @@ DOMAIN,lf-reward-video.bytedcdn.com,REJECT,extended-matching,pre-matching
 # DOMAIN-SUFFIX,log.snssdk.com,REJECT,extended-matching,pre-matching
 # DOMAIN-SUFFIX,log-hl.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN-SUFFIX,mon.snssdk.com,REJECT,extended-matching,pre-matching
+# 2026-11-04 fanqie-loon 档位 B（安全，仅少上报）：APM 与日志通道
+DOMAIN-SUFFIX,apm.snssdk.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,toblog.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN-SUFFIX,ib.snssdk.com,REJECT,extended-matching,pre-matching
 DOMAIN,mon.toutiaocloud.net,REJECT,extended-matching,pre-matching
 DOMAIN,mon.toutiaocloud.com,REJECT,extended-matching,pre-matching
