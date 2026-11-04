@@ -2,7 +2,7 @@
 #!desc=2026-11-04 通用版：B站、番茄、红果、微博 + APP 启动页开屏广告（约 188 个 App，整合 deezertidal startingad）。域名 + URL 改写 + 可选 MITM + B站脚本层（app2smile/rules，[Script] 默认启用，可注释回滚）；不含证书。B站第 3/4 层、B站脚本层（app.bilibili.com/grpc.biliapi.net）、番茄 HTTPS 改写层、第四部分「APP 启动页」规则需要开启 HTTPS 解密；红果、微博、B站第 1/2 层不需要。按远程模块 URL 安装后可自动更新。
 #!author=本地整理（来源：blackmatrix7、deezertidal/bm7、BiliUniverse/ADBlock、SherryBX/XiaoQi、q85985477/shadowrocket-modules、qq2519157/adblock-modules（MIT © 2026 logan）、2026-10-29/30 真机日志）
 #!homepage=https://github.com/HyPerP/shadowrocket-rules
-#!version=1.8
+#!version=1.9
 #!date=2026-11-04
 
 # ============================================================
@@ -20,6 +20,8 @@
 #   已跳过 → 258 条改写；其中 3 条重复 + 1 条 lookbehind 丢弃 → 收录 254 条；1 条过宽规则
 #   （/videos/other/）默认注释；另有 11 条疑似误伤正常功能的规则默认注释 → 实际启用 242 条。
 #   注意：上游该仓库未提供 LICENSE，第四部分规则仅供个人自用；公开再分发前请自行确认授权。
+#   2026-11-04 B站开屏策略调整：splash/show、list 不再 reject-dict，改为放行 + bili-json 脚本删除 data.show，
+#   避免“reject→App 缓存旧广告素材→之后规则失效”的循环（依据 blackmatrix7 startup 文档）；brand/event 仍拒绝。
 #   2026-11-04 诊断用 MITM 扩容（临时）：*.douyinpic.com（覆盖 p*-sign/p26/webcast-sign）、*.fqnovelpic.com、i0/i1/i2.hdslb.com、
 #   *.ecombdimg.com、hilo.bilibili.com；
 #   只解密图片域，用于定位「B站开屏图片」与「番茄阅读页广告图片」的真实 URL 路径；定位后改精确 URL-REGEX 再缩减。
@@ -422,21 +424,20 @@ DOMAIN,ad.us.sinaimg.cn,REJECT,extended-matching,pre-matching
 # ^https?:\/\/ssaxcode-[A-Za-z0-9.-]+\.(?:acgvideo|bilivideo)\.com\/ - reject
 
 # ---- 第 3 层：开屏广告接口（必须开启 HTTPS 解密） ----
-# blackmatrix7 / deezertidal(bm7) 验证过的写法：返回 200 + 空 JSON，让 App 认为「没有开屏广告」。
-# 下面一条「splash 前缀兜底」一次覆盖整系接口，包括：
-#   /x/v2/splash/show         开屏展示（bm7 规则原形：^https://app.bilibili.com/x/v2/splash/show - reject-dict）
-#   /x/v2/splash/list         开屏广告列表（含 enable_pre_download 预下载开关，控制 SPLASH.mp4 下载）
-#   /x/v2/splash/brand/list   开屏品牌/默认图列表
-#   /x/v2/splash/event/list2  BiliUniverse/ADBlock 脚本覆盖的新版曝光上报接口
-#   /x/v2/splash/event 等     其余上报/配置子路径
-^https?:\/\/app\.bilibili\.com\/x\/v2\/splash(?:\/|\?|$) - reject-dict
+# 2026-11-04 策略调整（依据 blackmatrix7/script/startup/README.md）：
+#   直接 reject 开屏接口时，如果 App 之前已经缓存过广告素材，之后规则再拦也无效（只能重装/等过期）。
+#   blackmatrix7 的方案是「放行请求 + 脚本修改广告生效时间/清空 show」，响应始终是合法 JSON，
+#   App 不会因为请求失败而保留/继续使用旧缓存。本模块采用同样思路：
+#     - /x/v2/splash/show、/x/v2/splash/list 放行，由 [Script] 的 bili-json.js 删除 data.show；
+#     - /x/v2/splash/brand/list、/x/v2/splash/event/list2 仍 reject-dict（默认品牌图/上报，不参与预下载）。
+#   注意：如果脚本没加载（[Script] 被注释/下载失败），开屏广告会回来——届时可改回下面注释的旧写法。
+^https?:\/\/app\.bilibili\.com\/x\/v2\/splash\/(?:brand\/list|event\/list2)(?:\?|$) - reject-dict
 # api.bilibili.com 兜底（部分版本 / AB 实验下开屏接口可能走这个域；它也是正常 API 域，
 # 只有命中 /x/v2/splash 路径才改写，其它 API 请求原样放行）。
 ^https?:\/\/api\.bilibili\.com\/x\/v2\/splash(?:\/|\?|$) - reject-dict
 
-# 保守备选（只想拦「广告接口」、保留 brand/list 官方默认开屏图时用）：
-#   把上面第一条 app.bilibili.com 前缀兜底注释掉，改用下面这条：
-# ^https?:\/\/app\.bilibili\.com\/x\/v2\/splash\/(?:show|list)(?:\?|$) - reject-dict
+# 旧策略（已弃用，保留说明）：整系 reject-dict 会把 splash/show、list 一起拒掉，导致 App 使用旧缓存：
+# ^https?:\/\/app\.bilibili\.com\/x\/v2\/splash(?:\/|\?|$) - reject-dict
 
 # ---- 第 4 层：规则型广告/推广拦截（v2 新增；全部需 HTTPS 解密） ----
 # 以下规则都来自社区成熟模块的「规则型」部分（URL Rewrite / Map Local），来源见每行上方注释；
@@ -1092,7 +1093,7 @@ hostname = %APPEND% *.pangolin-sdk-toutiao.com,*.pglstatp-toutiao.com,*.pstatp.c
 # 需要 HTTPS 解密（app.bilibili.com / grpc.biliapi.net）；不开解密时脚本收不到 body，等于失效。
 # 如 B站出现异常（白屏/动态/视频页报错）：先注释下面 bili-json / bili-proto 对应行。
 # ==========================================================================
-# bilibili-json.js：开屏 data.show 清空 + x/v2/feed/index 过滤 cm_v2/banner/游戏广告卡片
+# bilibili-json.js：开屏 data.show 清空（splash/show、list 已放行，由本脚本接管）+ x/v2/feed/index 过滤广告卡片
 bili-json = type=http-response, pattern=^https:\/\/app\.bilibili\.com\/x\/v2\/(splash\/(list|show)|feed\/index), requires-body=1, script-path=https://raw.githubusercontent.com/app2smile/rules/master/js/bilibili-json.js
 # bilibili-proto.js：视频页 View / 动态 DynAll 的 protobuf 广告字段（高风险：若异常先注释本行）
 bili-proto = type=http-response, pattern=^https:\/\/(grpc\.biliapi\.net|app\.bilibili\.com)\/bilibili\.app\.(viewunite\.v1\.View\/View|dynamic\.v2\.Dynamic\/DynAll)$, requires-body=1, script-path=https://raw.githubusercontent.com/app2smile/rules/master/js/bilibili-proto.js
